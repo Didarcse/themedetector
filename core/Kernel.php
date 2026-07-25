@@ -11,6 +11,8 @@ final class Kernel
 {
     public function __construct(
         private readonly Application $application,
+        private readonly Router $router,
+        private readonly Dispatcher $dispatcher,
     ) {}
 
     public function application(): Application
@@ -18,11 +20,17 @@ final class Kernel
         return $this->application;
     }
 
-    public function handle(): Response
+    public function handle(Request $request): Response
     {
-        return new Response(
-            content: 'Kernel Framework v1 Ready',
-            status: 200,
-        );
+        $route = $this->router->match($request);
+
+        if ($route === null) {
+            return new Response(
+                content: '404 Not Found',
+                status: 404,
+            );
+        }
+
+        return $this->dispatcher->dispatch($route);
     }
 }
