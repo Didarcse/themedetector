@@ -2,48 +2,30 @@
 
 declare(strict_types=1);
 
-/**
- * Application Bootstrap
- *
- * Loads configuration, initializes environment,
- * and returns the application instance.
- *
- * @author  Didar Alam <didar@globalkernel.com>
- * @company Global Kernel
- */
+use Core\Application;
+use Core\Config;
+use Core\Container;
+use Core\Dispatcher;
+use Core\Kernel;
+use Core\Router;
 
-use Dotenv\Dotenv;
+require_once dirname(__DIR__) . '/vendor/autoload.php';
 
-defined('BASE_PATH') || define('BASE_PATH', dirname(__DIR__));
+$config = new Config();
 
-if (!function_exists('env')) {
-    function env(string $key, mixed $default = null): mixed
-    {
-        $value = getenv($key);
+$application = new Application(
+    basePath: dirname(__DIR__),
+    config: $config->all(),
+);
 
-        if ($value === false) {
-            return $default;
-        }
+$container = new Container();
+$router = new Router();
+$dispatcher = new Dispatcher(container: $container);
 
-        return match (strtolower($value)) {
-            'true', '(true)'   => true,
-            'false', '(false)'  => false,
-            'null', '(null)'    => null,
-            'empty', '(empty)'  => '',
-            default             => $value,
-        };
-    }
-}
+$kernel = new Kernel(
+    application: $application,
+    router: $router,
+    dispatcher: $dispatcher,
+);
 
-$dotenv = Dotenv::createImmutable(BASE_PATH);
-$dotenv->safeLoad();
-
-$app = [
-    'name'    => $_ENV['APP_NAME'] ?? 'ThemeDetectorTool',
-    'env'     => $_ENV['APP_ENV'] ?? 'production',
-    'debug'   => filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN),
-    'url'     => $_ENV['APP_URL'] ?? 'http://localhost',
-    'version' => APP_VERSION,
-];
-
-return $app;
+return $kernel;
