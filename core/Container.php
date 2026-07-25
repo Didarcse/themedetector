@@ -42,6 +42,13 @@ final class Container
             || (class_exists($abstract) && $this->isInstantiable($abstract));
     }
 
+    public function instance(string $abstract, object $instance): void
+    {
+        $this->instances[$abstract] = $instance;
+        $this->singletons[$abstract] = true;
+        unset($this->bindings[$abstract]);
+    }
+
     public function make(string $abstract): object
     {
         if (isset($this->instances[$abstract])) {

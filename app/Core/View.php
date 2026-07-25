@@ -7,7 +7,7 @@ namespace App\Core;
 use RuntimeException;
 
 /**
- * Lightweight PHP view renderer.
+ * Lightweight PHP view renderer with layout support.
  */
 final class View
 {
@@ -15,15 +15,24 @@ final class View
         private readonly string $viewsPath,
     ) {}
 
-    public function render(string $view, array $data = []): string
+    public function render(string $view, array $data = [], ?string $layout = null): string
     {
-        $path = $this->viewsPath
-            . DIRECTORY_SEPARATOR
-            . str_replace('.', DIRECTORY_SEPARATOR, $view)
-            . '.php';
+        $content = $this->renderFile($this->resolvePath($view), $data);
 
+        if ($layout === null) {
+            return $content;
+        }
+
+        return $this->renderFile(
+            $this->resolvePath($layout),
+            array_merge($data, ['content' => $content]),
+        );
+    }
+
+    private function renderFile(string $path, array $data): string
+    {
         if (!is_file($path)) {
-            throw new RuntimeException("View [{$view}] not found at [{$path}].");
+            throw new RuntimeException("View not found at [{$path}].");
         }
 
         extract($data, EXTR_SKIP);
@@ -33,5 +42,13 @@ final class View
         include $path;
 
         return (string) ob_get_clean();
+    }
+
+    private function resolvePath(string $view): string
+    {
+        return $this->viewsPath
+            . DIRECTORY_SEPARATOR
+            . str_replace('.', DIRECTORY_SEPARATOR, $view)
+            . '.php';
     }
 }
