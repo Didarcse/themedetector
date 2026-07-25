@@ -1,0 +1,42 @@
+# Dependencies
+/vendor/
+composer.lock
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+/.idea/
+/.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+/storage/logs/*.log
+
+# Cache
+/storage/cache/*
+
+# Uploads
+/storage/uploads/*
+!storage/uploads/.gitkeep
+
+# Tests
+/phpunit.xml
+/phpunit.xml.bak
+/.phpunit.cache/
+/coverage/
+
+# Static analysis
+/phpstan.neon
+
+# Build
+/build/
+/dist/
