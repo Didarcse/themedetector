@@ -10,6 +10,8 @@ declare(strict_types=1);
  * @company Global Kernel
  */
 
+use App\Core\Request;
+
 define('KERNEL_VERSION', '1.0.0');
 define('APP_VERSION', '2.0.0');
 define('APP_NAME', 'ThemeDetectorTool');
@@ -17,25 +19,16 @@ define('FRAMEWORK_NAME', 'Kernel Framework');
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 
-$app = require_once dirname(__DIR__) . '/bootstrap/app.php';
+/** @var App\Core\Kernel $kernel */
+$kernel = require dirname(__DIR__) . '/bootstrap/app.php';
 
-$httpMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$uri = $_SERVER['REQUEST_URI'] ?? '/';
+$request = new Request(
+    method: $_SERVER['REQUEST_METHOD'] ?? 'GET',
+    uri: parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH),
+    query: $_GET,
+    post: $_POST,
+    server: $_SERVER,
+);
 
-if (false !== $pos = strpos($uri, '?')) {
-    $uri = substr($uri, 0, $pos);
-}
-
-$uri = rawurldecode($uri);
-
-header('X-Powered-By: ' . FRAMEWORK_NAME . ' v' . KERNEL_VERSION);
-header('Content-Type: application/json; charset=utf-8');
-
-echo json_encode([
-    'app'       => APP_NAME,
-    'version'   => APP_VERSION,
-    'framework' => FRAMEWORK_NAME,
-    'kernel'    => KERNEL_VERSION,
-    'status'    => 'initialized',
-    'timestamp' => time(),
-], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+$response = $kernel->handle($request);
+$response->send();

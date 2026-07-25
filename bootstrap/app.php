@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Core\Application;
+use App\Core\Config;
+use App\Core\Container;
+use App\Core\Dispatcher;
+use App\Core\ExceptionHandler;
+use App\Core\Kernel;
+use App\Core\Router;
 use App\Core\View;
-use Core\Application;
-use Core\Config;
-use Core\Container;
-use Core\Dispatcher;
-use Core\Kernel;
-use Core\Router;
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 
@@ -30,10 +31,16 @@ $container->singleton(
     ),
 );
 
+$exceptionHandler = new ExceptionHandler();
+
 $kernel = new Kernel(
-    application: $application,
     router: $router,
     dispatcher: $dispatcher,
+    exceptionHandler: $exceptionHandler,
 );
+
+require dirname(__DIR__) . '/routes/web.php';
+
+$GLOBALS['app'] = $container;
 
 return $kernel;

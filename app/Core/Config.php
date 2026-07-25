@@ -2,13 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Core;
+namespace App\Core;
 
 /**
  * Immutable value object representing application configuration.
  */
 final class Config
 {
+    private const MISSING = "\0missing";
+
     /** @var array<string, mixed> */
     private readonly array $items;
 
@@ -26,40 +28,25 @@ final class Config
 
     public function has(string $key): bool
     {
-        return $this->exists($key);
+        return $this->traverse($key) !== self::MISSING;
     }
 
     public function get(string $key, mixed $default = null): mixed
     {
-        $value = $this->resolve($key);
+        $result = $this->traverse($key);
 
-        return $value !== null ? $value : $default;
+        return $result === self::MISSING ? $default : $result;
     }
 
-    private function exists(string $key): bool
+    /** @return mixed */
+    private function traverse(string $key): mixed
     {
         $segments = explode('.', $key);
         $current = $this->items;
 
         foreach ($segments as $segment) {
             if (!is_array($current) || !array_key_exists($segment, $current)) {
-                return false;
-            }
-
-            $current = $current[$segment];
-        }
-
-        return true;
-    }
-
-    private function resolve(string $key): mixed
-    {
-        $segments = explode('.', $key);
-        $current = $this->items;
-
-        foreach ($segments as $segment) {
-            if (!is_array($current) || !array_key_exists($segment, $current)) {
-                return null;
+                return self::MISSING;
             }
 
             $current = $current[$segment];

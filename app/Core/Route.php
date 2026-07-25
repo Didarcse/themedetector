@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Core;
+namespace App\Core;
 
 /**
  * Immutable representation of a single registered route.
@@ -11,7 +11,7 @@ final class Route
 {
     private readonly string $method;
     private readonly string $uri;
-    /** @var callable|array<string, string>|string */
+    /** @var callable|array|string */
     private readonly mixed $handler;
 
     public function __construct(
@@ -19,6 +19,10 @@ final class Route
         string $uri,
         callable|array|string $handler,
     ) {
+        if (trim($uri) === '') {
+            throw new \InvalidArgumentException('Route URI must not be empty.');
+        }
+
         $this->method = strtoupper($method);
         $this->uri = '/' . ltrim(trim($uri), '/');
         $this->handler = $handler;

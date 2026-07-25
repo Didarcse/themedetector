@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Core;
+namespace App\Core;
 
 /**
  * Immutable HTTP response representation.

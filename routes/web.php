@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Http\Controllers\HomeController;
+use App\Controllers\HomeController;
 
-/** @var Core\Router $router */
+/** @var App\Core\Router $router */
 
 $router->get('/', HomeController::class);
 

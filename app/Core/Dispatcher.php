@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Core;
+namespace App\Core;
 
 use RuntimeException;
 
@@ -43,8 +43,12 @@ final class Dispatcher
 
     private function dispatchArray(array $handler): Response
     {
-        $controllerClass = $handler[0] ?? null;
-        $method = $handler[1] ?? null;
+        if (count($handler) !== 2) {
+            throw new RuntimeException('Controller array handler must contain exactly two elements.');
+        }
+
+        $controllerClass = $handler[0];
+        $method = $handler[1];
 
         if (!is_string($controllerClass) || !is_string($method)) {
             throw new RuntimeException('Invalid controller array handler.');

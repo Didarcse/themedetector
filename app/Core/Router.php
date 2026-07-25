@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Core;
+namespace App\Core;
+
+use RuntimeException;
 
 /**
  * In-memory route registry with exact URI and method matching.
@@ -26,7 +28,16 @@ final class Router
     {
         $route = new Route($method, $uri, $handler);
 
-        $this->routes[$route->method()][$route->uri()] = $route;
+        $normalizedMethod = $route->method();
+        $normalizedUri = $route->uri();
+
+        if (isset($this->routes[$normalizedMethod][$normalizedUri])) {
+            throw new RuntimeException(
+                "Route [{$normalizedMethod}] [{$normalizedUri}] is already registered."
+            );
+        }
+
+        $this->routes[$normalizedMethod][$normalizedUri] = $route;
     }
 
     public function match(Request $request): ?Route

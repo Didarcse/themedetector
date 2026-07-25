@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Core\Container;
-use RuntimeException;
 
 function app(): Container
 {

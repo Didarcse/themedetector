@@ -39,9 +39,15 @@ final class View
 
         ob_start();
 
-        include $path;
+        try {
+            include $path;
 
-        return (string) ob_get_clean();
+            return (string) ob_get_clean();
+        } catch (\Throwable $e) {
+            ob_end_clean();
+
+            throw $e;
+        }
     }
 
     private function resolvePath(string $view): string
