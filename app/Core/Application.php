@@ -23,4 +23,25 @@ final class Application
     {
         return $this->config;
     }
+
+    public function path(string $path = ''): string
+    {
+        return $this->basePath . ($path !== '' ? DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR . '/') : '');
+    }
+
+    public function configValue(string $key, mixed $default = null): mixed
+    {
+        $segments = explode('.', $key);
+        $current = $this->config;
+
+        foreach ($segments as $segment) {
+            if (!is_array($current) || !array_key_exists($segment, $current)) {
+                return $default;
+            }
+
+            $current = $current[$segment];
+        }
+
+        return $current;
+    }
 }

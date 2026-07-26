@@ -22,13 +22,7 @@ require_once dirname(__DIR__) . '/vendor/autoload.php';
 /** @var App\Core\Kernel $kernel */
 $kernel = require dirname(__DIR__) . '/bootstrap/app.php';
 
-$request = new Request(
-    method: $_SERVER['REQUEST_METHOD'] ?? 'GET',
-    uri: parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH),
-    query: $_GET,
-    post: $_POST,
-    server: $_SERVER,
-);
+$request = Request::fromGlobals();
 
 $response = $kernel->handle($request);
 $response->send();

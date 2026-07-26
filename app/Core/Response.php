@@ -22,7 +22,24 @@ final class Response
     ) {
         $this->content = $content;
         $this->status = $status;
-        $this->headers = $headers;
+        $this->headers = array_merge(
+            ['Content-Type' => 'text/html; charset=UTF-8'],
+            $headers,
+        );
+    }
+
+    /**
+     * @param array<mixed>|object $data
+     */
+    public static function json(array|object $data, int $status = 200): self
+    {
+        $encoded = json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+
+        return new self(
+            $encoded,
+            $status,
+            ['Content-Type' => 'application/json; charset=UTF-8'],
+        );
     }
 
     public function content(): string

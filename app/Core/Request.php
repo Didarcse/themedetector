@@ -65,6 +65,17 @@ final class Request
         return $this->server;
     }
 
+    public static function fromGlobals(): self
+    {
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+        $query = $_GET;
+        $post = $_POST;
+        $server = $_SERVER;
+
+        return new self($method, $uri, $query, $post, $server);
+    }
+
     public function input(string $key, mixed $default = null): mixed
     {
         return $this->post[$key] ?? $default;

@@ -21,6 +21,17 @@ $application = new Application(
 );
 
 $container = new Container();
+
+$container->singleton(
+    Config::class,
+    fn () => $config,
+);
+
+$container->singleton(
+    Application::class,
+    fn () => $application,
+);
+
 $router = new Router();
 $dispatcher = new Dispatcher(container: $container);
 
