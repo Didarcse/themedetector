@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Detection\Shopify\Parser;
+namespace App\Modules\Detection\Shopify\Parsers;
 
 /**
  * Extracts structured Shopify theme asset metadata from HTML.
