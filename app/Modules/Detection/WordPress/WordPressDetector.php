@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Detection\WordPress;
 
+use App\Modules\Detection\DetectionContext;
 use App\Modules\Detection\DetectionResult;
 use App\Modules\Detection\DetectorInterface;
 use App\Modules\Detection\WordPress\Rules\RuleInterface;
@@ -27,13 +28,15 @@ final class WordPressDetector implements DetectorInterface
     }
 
     /**
-     * Execute WordPress detection rules against the given page.
+     * Execute WordPress detection rules against the given context.
      *
-     * @param string $html The complete HTML source of the target website.
-     * @param string $url  The original website URL.
+     * @param DetectionContext $context The immutable HTTP response context.
      */
-    public function detect(string $html, string $url): DetectionResult
+    public function detect(DetectionContext $context): DetectionResult
     {
+        $html = $context->html();
+        $url = $context->finalUrl();
+
         $ruleResults = [];
         $mergedMetadata = [];
 
