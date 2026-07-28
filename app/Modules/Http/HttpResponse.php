@@ -46,6 +46,24 @@ final class HttpResponse
         return $this->headers;
     }
 
+    /**
+     * Retrieve a single header value by name, case-insensitively.
+     *
+     * @return string|null The header value, or null if not present.
+     */
+    public function header(string $name): ?string
+    {
+        $lower = strtolower($name);
+
+        foreach ($this->headers as $key => $value) {
+            if (strtolower($key) === $lower) {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
     /** @return array<string, string> */
     public function cookies(): array
     {
