@@ -13,10 +13,9 @@ namespace App\Modules\Detection;
 interface DetectorInterface
 {
     /**
-     * Detect whether a specific technology is present on the given page.
+     * Detect whether a specific technology is present in the given context.
      *
-     * @param string $html The complete HTML source of the target website.
-     * @param string $url  The original website URL.
+     * @param DetectionContext $context The immutable HTTP response context.
      */
-    public function detect(string $html, string $url): DetectionResult;
+    public function detect(DetectionContext $context): DetectionResult;
 }
