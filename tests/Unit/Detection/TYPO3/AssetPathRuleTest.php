@@ -84,7 +84,7 @@ final class AssetPathRuleTest extends TestCase
 
         self::assertTrue($result['matched']);
         self::assertSame(
-            ['asset_path' => '/typo3/sysext/'],
+            ['asset_path' => '/typo3/'],
             $result['metadata'],
         );
     }

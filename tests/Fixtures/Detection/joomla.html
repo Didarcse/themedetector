@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Example Joomla Site</title>
+    <meta name="generator" content="Joomla! - Open Source Content Management - Version 5.1.0">
+    <script src="/media/system/js/core.js"></script>
+    <script src="/media/system/js/mootools-core.js"></script>
+</head>
+<body>
+    <div id="system-message-container">
+        <div class="joomla-toolbar-button">
+            <button type="button">Save</button>
+        </div>
+    </div>
+    <form action="/index.php?option=com_content&view=article" method="post">
+        <input type="hidden" name="option" value="com_content">
+    </form>
+    <script>
+        window.Joomla = window.Joomla || {};
+        Joomla.getOptions('system.paths');
+    </script>
+</body>
+</html>
