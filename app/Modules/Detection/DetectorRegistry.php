@@ -5,12 +5,29 @@ declare(strict_types=1);
 namespace App\Modules\Detection;
 
 /**
- * Stores and exposes all registered technology detectors.
+ * Provides a central registry for every CMS detector supported by the
+ * Detection Engine.
  *
- * Preserves insertion order and provides access to every detector
- * registered with the system.
+ * The registry is responsible only for registering and exposing detector
+ * instances. It performs no detection, no orchestration, no confidence
+ * calculation, and no HTTP requests.
+ *
+ * Responsibilities:
+ *
+ * - Store detector instances in the exact order they were provided.
+ * - Expose every registered detector via the all() accessor.
+ *
+ * Design philosophy:
+ *
+ * - Single Responsibility Principle: the registry has no business logic,
+ *   no detection logic, no HTML parsing, no HTTP, no confidence
+ *   calculation, and no metadata manipulation.
+ * - Detectors are never reordered, filtered, or transformed. The all()
+ *   accessor returns exactly what was supplied.
+ * - The registry is stateless after construction, deterministic, and
+ *   side-effect free.
  */
-final class DetectorRegistry
+final readonly class DetectorRegistry
 {
     /**
      * @var list<DetectorInterface>
@@ -18,7 +35,7 @@ final class DetectorRegistry
     private readonly array $detectors;
 
     /**
-     * @param iterable<DetectorInterface> $detectors
+     * @param iterable<DetectorInterface> $detectors The detectors to register.
      */
     public function __construct(
         iterable $detectors,
@@ -27,7 +44,10 @@ final class DetectorRegistry
     }
 
     /**
-     * Returns every registered detector.
+     * Return every registered detector.
+     *
+     * Detectors are returned exactly as provided: no reordering, no
+     * filtering, and no transformation.
      *
      * @return iterable<DetectorInterface>
      */
@@ -37,9 +57,9 @@ final class DetectorRegistry
     }
 
     /**
-     * Returns the number of registered detectors.
+     * Return the number of registered detectors.
      *
-     * @return int
+     * @return int The number of registered detectors.
      */
     public function count(): int
     {
@@ -47,11 +67,11 @@ final class DetectorRegistry
     }
 
     /**
-     * Convert an iterable to a list, preserving order.
+     * Convert an iterable to a list, preserving insertion order.
      *
-     * @param iterable<DetectorInterface> $iterable
+     * @param iterable<DetectorInterface> $iterable The iterable to materialize.
      *
-     * @return list<DetectorInterface>
+     * @return list<DetectorInterface> The materialized detectors.
      */
     private function materialize(iterable $iterable): array
     {
