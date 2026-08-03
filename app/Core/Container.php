@@ -7,15 +7,37 @@ namespace App\Core;
 use RuntimeException;
 
 /**
- * Lightweight dependency injection container with reflection-based resolution.
+ * Lightweight dependency injection container for the Kernel Framework.
+ *
+ * The container is responsible for constructing and resolving application
+ * services. It centralizes object creation and dependency management while
+ * performing no business logic.
+ *
+ * Services are registered by identifier with a factory callable or a
+ * pre-built object, resolved lazily on first access, and cached so that
+ * every subsequent access returns the same singleton instance.
+ *
+ * Responsibilities:
+ *
+ * - Register services under a string identifier.
+ * - Resolve registered services on demand.
+ * - Return singleton instances.
+ *
+ * Design philosophy:
+ *
+ * - Dependency Injection and Inversion of Control: services never
+ *   construct their collaborators; the container wires them.
+ * - Single Responsibility Principle: the container registers and resolves
+ *   services only. It contains no application logic.
+ * - Lazy service resolution: factories run only when a service is first
+ *   requested.
+ * - Singleton service lifetime: each service is resolved once and reused.
+ * - The container is stateless except for the service registry itself.
  */
 final class Container
 {
-    /** @var array<string, callable|string> */
-    private array $bindings = [];
-
-    /** @var array<string, bool> */
-    private array $singletons = [];
+    /** @var array<string, callable> */
+    private array $definitions = [];
 
     /** @var array<string, object> */
     private array $instances = [];
@@ -23,171 +45,83 @@ final class Container
     /** @var array<string, true> */
     private array $resolving = [];
 
-    public function bind(string $abstract, callable|string $concrete): void
+    /**
+     * Register a service under the given identifier.
+     *
+     * When the definition is a callable it acts as a lazy factory invoked
+     * with the container as its only argument on first resolution. When
+     * the definition is an object it is registered directly and returned
+     * as-is. Re-registering an identifier replaces the previous
+     * definition.
+     *
+     * @param string        $id         The service identifier.
+     * @param callable|object $definition The factory callable or pre-built
+     *                                    service instance.
+     */
+    public function set(string $id, callable|object $definition): void
     {
-        $this->bindings[$abstract] = $concrete;
-        unset($this->singletons[$abstract], $this->instances[$abstract]);
-    }
+        if (is_object($definition)) {
+            $this->instances[$id] = $definition;
+            unset($this->definitions[$id]);
 
-    public function singleton(string $abstract, callable|string $concrete): void
-    {
-        $this->bindings[$abstract] = $concrete;
-        $this->singletons[$abstract] = true;
-        unset($this->instances[$abstract]);
-    }
-
-    public function has(string $abstract): bool
-    {
-        return isset($this->bindings[$abstract])
-            || (class_exists($abstract) && $this->isInstantiable($abstract));
-    }
-
-    public function instance(string $abstract, object $instance): void
-    {
-        $this->instances[$abstract] = $instance;
-        $this->singletons[$abstract] = true;
-        unset($this->bindings[$abstract]);
-    }
-
-    public function make(string $abstract): object
-    {
-        if (isset($this->instances[$abstract])) {
-            return $this->instances[$abstract];
+            return;
         }
 
-        if (isset($this->resolving[$abstract])) {
-            throw new RuntimeException("Circular dependency detected while resolving [{$abstract}].");
+        $this->definitions[$id] = $definition;
+        unset($this->instances[$id]);
+    }
+
+    /**
+     * Determine whether a service has been registered.
+     *
+     * @param string $id The service identifier.
+     */
+    public function has(string $id): bool
+    {
+        return isset($this->definitions[$id]) || isset($this->instances[$id]);
+    }
+
+    /**
+     * Resolve a service and return its singleton instance.
+     *
+     * The service is resolved lazily on first access and cached, so every
+     * subsequent call returns the same instance.
+     *
+     * @param string $id The service identifier.
+     *
+     * @return object The resolved singleton instance.
+     *
+     * @throws RuntimeException When the service has not been registered,
+     *                          when its factory resolves to a non-object
+     *                          value, or when a circular dependency is
+     *                          detected.
+     */
+    public function get(string $id): object
+    {
+        if (isset($this->instances[$id])) {
+            return $this->instances[$id];
         }
 
-        $this->resolving[$abstract] = true;
+        if (!isset($this->definitions[$id])) {
+            throw new RuntimeException("Service [{$id}] has not been registered.");
+        }
+
+        if (isset($this->resolving[$id])) {
+            throw new RuntimeException("Circular dependency detected while resolving [{$id}].");
+        }
+
+        $this->resolving[$id] = true;
 
         try {
-            $object = $this->resolve($abstract);
+            $instance = ($this->definitions[$id])($this);
 
-            if (isset($this->singletons[$abstract])) {
-                $this->instances[$abstract] = $object;
+            if (!is_object($instance)) {
+                throw new RuntimeException("Service [{$id}] resolved to a non-object value.");
             }
 
-            return $object;
+            return $this->instances[$id] = $instance;
         } finally {
-            unset($this->resolving[$abstract]);
+            unset($this->resolving[$id]);
         }
-    }
-
-    private function resolve(string $abstract): object
-    {
-        if (isset($this->bindings[$abstract])) {
-            return $this->resolveBinding($abstract);
-        }
-
-        if (class_exists($abstract)) {
-            return $this->build($abstract);
-        }
-
-        throw new RuntimeException("No binding found for [{$abstract}] and the class does not exist.");
-    }
-
-    private function resolveBinding(string $abstract): object
-    {
-        $concrete = $this->bindings[$abstract];
-
-        if (is_callable($concrete)) {
-            $object = $concrete($this);
-
-            if (!is_object($object)) {
-                throw new RuntimeException(
-                    "Binding [{$abstract}] resolved to a non-object value."
-                );
-            }
-
-            return $object;
-        }
-
-        return $this->build($concrete);
-    }
-
-    private function build(string $class): object
-    {
-        try {
-            $reflection = new \ReflectionClass($class);
-        } catch (\ReflectionException $e) {
-            throw new RuntimeException(
-                "Cannot reflect class [{$class}]: {$e->getMessage()}.",
-                previous: $e,
-            );
-        }
-
-        if (!$reflection->isInstantiable()) {
-            throw new RuntimeException("Class [{$class}] is not instantiable.");
-        }
-
-        $constructor = $reflection->getConstructor();
-
-        if ($constructor === null) {
-            return new $class();
-        }
-
-        $parameters = $constructor->getParameters();
-        $arguments = [];
-
-        foreach ($parameters as $parameter) {
-            $arguments[] = $this->resolveParameter($parameter, $class);
-        }
-
-        try {
-            return $reflection->newInstanceArgs($arguments);
-        } catch (\ReflectionException $e) {
-            throw new RuntimeException(
-                "Cannot instantiate class [{$class}]: {$e->getMessage()}.",
-                previous: $e,
-            );
-        }
-    }
-
-    private function resolveParameter(\ReflectionParameter $parameter, string $class): mixed
-    {
-        $type = $parameter->getType();
-
-        if ($type === null || $type instanceof \ReflectionUnionType || $type instanceof \ReflectionIntersectionType) {
-            if ($parameter->isDefaultValueAvailable()) {
-                return $parameter->getDefaultValue();
-            }
-
-            if ($parameter->allowsNull()) {
-                return null;
-            }
-
-            throw new RuntimeException(
-                "Cannot resolve parameter [{$parameter->getName()}] of [{$class}]."
-            );
-        }
-
-        /** @var \ReflectionNamedType $type */
-        if ($type->isBuiltin()) {
-            if ($parameter->isDefaultValueAvailable()) {
-                return $parameter->getDefaultValue();
-            }
-
-            if ($type->allowsNull()) {
-                return null;
-            }
-
-            throw new RuntimeException(
-                "Cannot resolve builtin parameter [{$parameter->getName()}] of [{$class}]."
-            );
-        }
-
-        return $this->make($type->getName());
-    }
-
-    private function isInstantiable(string $class): bool
-    {
-        try {
-            $reflection = new \ReflectionClass($class);
-        } catch (\ReflectionException $e) {
-            return false;
-        }
-
-        return $reflection->isInstantiable();
     }
 }
