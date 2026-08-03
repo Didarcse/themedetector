@@ -75,7 +75,7 @@ final class XmlRpcRule implements RuleInterface
         try {
             $response = $this->httpClient->get($url);
 
-            if ($response->status() < 200 || $response->status() >= 300) {
+            if ($response->statusCode() < 200 || $response->statusCode() >= 300) {
                 return null;
             }
 

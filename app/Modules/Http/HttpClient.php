@@ -13,11 +13,13 @@ namespace App\Modules\Http;
 final class HttpClient
 {
     /**
-     * Validate a URL string.
+     * Validate a URL string and return the trimmed, valid value.
      *
      * @throws HttpException If the URL is empty or malformed.
+     *
+     * @return non-empty-string The validated URL.
      */
-    private static function validateUrl(string $url): void
+    private static function validateUrl(string $url): string
     {
         $url = trim($url);
 
@@ -28,14 +30,17 @@ final class HttpClient
         if (filter_var($url, FILTER_VALIDATE_URL) === false) {
             throw new HttpException("Invalid URL: {$url}");
         }
+
+        return $url;
     }
 
     /**
-     * Parse raw response headers into a key-value map.
+     * Parse raw response headers into a name-to-values map.
      *
-     * Skips the status line and the trailing blank line.
+     * Skips the status line and the trailing blank line. Repeated header
+     * names are preserved as a list of values under a single key.
      *
-     * @return array<string, string>
+     * @return array<string, list<string>>
      */
     private static function parseHeaders(string $rawHeaders): array
     {
@@ -48,45 +53,17 @@ final class HttpClient
             }
 
             [$key, $value] = explode(':', $line, 2);
-            $headers[trim($key)] = trim($value);
+            $key = trim($key);
+            $value = trim($value);
+
+            if (!isset($headers[$key])) {
+                $headers[$key] = [];
+            }
+
+            $headers[$key][] = $value;
         }
 
         return $headers;
-    }
-
-    /**
-     * Parse Set-Cookie headers from raw header block into a name-value map.
-     *
-     * Operates on the raw header string to correctly capture multiple
-     * Set-Cookie headers that would be lost after key deduplication.
-     *
-     * @return array<string, string>
-     */
-    private static function parseCookies(string $rawHeaders): array
-    {
-        $cookies = [];
-        $lines = explode("\r\n", $rawHeaders);
-
-        foreach ($lines as $line) {
-            if ($line === '' || !str_contains($line, ':')) {
-                continue;
-            }
-
-            [$key, $value] = explode(':', $line, 2);
-
-            if (strcasecmp(trim($key), 'Set-Cookie') !== 0) {
-                continue;
-            }
-
-            $parts = explode(';', trim($value), 2);
-            $pair = explode('=', $parts[0], 2);
-
-            if (count($pair) === 2) {
-                $cookies[trim($pair[0])] = trim($pair[1]);
-            }
-        }
-
-        return $cookies;
     }
 
     /**
@@ -96,7 +73,7 @@ final class HttpClient
      */
     public function get(string $url): HttpResponse
     {
-        self::validateUrl($url);
+        $url = self::validateUrl($url);
 
         $handle = CurlFactory::create();
 
@@ -105,7 +82,7 @@ final class HttpClient
 
             $response = curl_exec($handle);
 
-            if ($response === false) {
+            if (!is_string($response)) {
                 $error = curl_error($handle);
                 throw new HttpException("cURL error: {$error}");
             }
@@ -115,16 +92,12 @@ final class HttpClient
             $rawHeaders = substr($response, 0, $info['header_size']);
             $body = substr($response, $info['header_size']);
 
-            $allHeaders = self::parseHeaders($rawHeaders);
-            $cookies = self::parseCookies($rawHeaders);
-
             return new HttpResponse(
+                originalUrl: $url,
+                finalUrl: $info['url'],
+                statusCode: $info['http_code'],
+                headers: self::parseHeaders($rawHeaders),
                 body: $body,
-                status: $info['http_code'],
-                headers: $allHeaders,
-                cookies: $cookies,
-                effectiveUrl: $info['url'],
-                responseTime: $info['total_time'],
             );
         } finally {
             curl_close($handle);

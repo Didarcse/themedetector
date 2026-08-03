@@ -112,11 +112,11 @@ final class CartEndpointRule implements RuleInterface
             return null;
         }
 
-        if ($response->status() !== 200) {
+        if ($response->statusCode() !== 200) {
             return null;
         }
 
-        $contentType = $response->header('Content-Type');
+        $contentType = $this->findHeader($response->headers(), 'Content-Type');
 
         if ($contentType === null) {
             return null;
@@ -127,6 +127,30 @@ final class CartEndpointRule implements RuleInterface
         }
 
         return $response;
+    }
+
+    /**
+     * Return the first value for a header name, case-insensitively.
+     *
+     * @param array<string, list<string>> $headers
+     */
+    private function findHeader(array $headers, string $name): ?string
+    {
+        $lowerName = strtolower($name);
+
+        foreach ($headers as $key => $values) {
+            if (strtolower($key) !== $lowerName) {
+                continue;
+            }
+
+            if ($values === []) {
+                return null;
+            }
+
+            return $values[0];
+        }
+
+        return null;
     }
 
     /**

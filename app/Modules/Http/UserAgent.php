@@ -32,6 +32,8 @@ final class UserAgent
 
     /**
      * Return a random User-Agent string.
+     *
+     * @return non-empty-string
      */
     public static function random(): string
     {

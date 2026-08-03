@@ -7,76 +7,66 @@ namespace App\Modules\Http;
 /**
  * Immutable HTTP response value object.
  *
- * Represents a complete HTTP response returned by an external service.
- * This object is fully immutable — once constructed, its state cannot be altered.
+ * Represents a complete HTTP response returned by an HttpClientInterface
+ * implementation. Contains the data required by the Detection Engine,
+ * Theme Extraction Engine, Plugin Detection Engine, and future Website
+ * Intelligence modules.
+ *
+ * Responsibilities:
+ *
+ * - Store the original and final URLs, status code, headers, and body of
+ *   an HTTP response.
+ * - Expose the stored data through read-only accessors.
+ *
+ * Design philosophy:
+ *
+ * - This is a pure Value Object: it contains data only and performs no
+ *   business logic.
+ * - The object is immutable, stateless, deterministic, and side-effect
+ *   free. Once constructed, its state cannot be altered.
+ * - No validation and no transformation are applied to the supplied
+ *   data; headers are exposed exactly as received, keyed by name with
+ *   each value as a list of the raw header values.
  */
-final class HttpResponse
+final readonly class HttpResponse
 {
     /**
-     * @param string          $body        Raw response body.
-     * @param int             $status      HTTP status code.
-     * @param array<string, string> $headers    Response headers keyed by name.
-     * @param array<string, string> $cookies    Response cookies keyed by name.
-     * @param string          $effectiveUrl Final URL after redirects.
-     * @param float           $responseTime Total round-trip time in seconds.
+     * @param array<string, list<string>> $headers Response headers keyed by name.
      */
     public function __construct(
-        private readonly string $body,
-        private readonly int $status,
-        private readonly array $headers,
-        private readonly array $cookies,
-        private readonly string $effectiveUrl,
-        private readonly float $responseTime,
+        private string $originalUrl,
+        private string $finalUrl,
+        private int $statusCode,
+        private array $headers,
+        private string $body,
     ) {
     }
 
-    public function body(): string
+    public function originalUrl(): string
     {
-        return $this->body;
+        return $this->originalUrl;
     }
 
-    public function status(): int
+    public function finalUrl(): string
     {
-        return $this->status;
+        return $this->finalUrl;
     }
 
-    /** @return array<string, string> */
+    public function statusCode(): int
+    {
+        return $this->statusCode;
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
     public function headers(): array
     {
         return $this->headers;
     }
 
-    /**
-     * Retrieve a single header value by name, case-insensitively.
-     *
-     * @return string|null The header value, or null if not present.
-     */
-    public function header(string $name): ?string
+    public function body(): string
     {
-        $lower = strtolower($name);
-
-        foreach ($this->headers as $key => $value) {
-            if (strtolower($key) === $lower) {
-                return $value;
-            }
-        }
-
-        return null;
-    }
-
-    /** @return array<string, string> */
-    public function cookies(): array
-    {
-        return $this->cookies;
-    }
-
-    public function effectiveUrl(): string
-    {
-        return $this->effectiveUrl;
-    }
-
-    public function responseTime(): float
-    {
-        return $this->responseTime;
+        return $this->body;
     }
 }

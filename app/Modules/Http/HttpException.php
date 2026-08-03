@@ -13,8 +13,13 @@ use Throwable;
  * Thrown when a request fails at the transport level — cURL errors,
  * connection timeouts, DNS resolution failures, SSL verification
  * failures, invalid HTTP responses, or general network errors.
+ *
+ * Serves as the common parent for the more specific HTTP exception
+ * family, allowing every transport failure to be caught through a
+ * single exception type regardless of the concrete client or adapter
+ * in use.
  */
-final class HttpException extends RuntimeException
+class HttpException extends RuntimeException
 {
     public function __construct(
         string $message,
