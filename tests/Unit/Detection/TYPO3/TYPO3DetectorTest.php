@@ -1,0 +1,199 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Unit\Detection\TYPO3;
+
+use App\Modules\Detection\DetectionContext;
+use App\Modules\Detection\DetectionResult;
+use App\Modules\Detection\TYPO3\ConfidenceCalculator;
+use App\Modules\Detection\TYPO3\TYPO3Detector;
+use App\Modules\Detection\TYPO3\Rules\AssetPathRule;
+use App\Modules\Detection\TYPO3\Rules\MetaGeneratorRule;
+use App\Modules\Detection\TYPO3\Rules\RuleInterface;
+use App\Modules\Detection\TYPO3\Rules\ScriptFingerprintRule;
+use PHPUnit\Framework\TestCase;
+
+final class TYPO3DetectorTest extends TestCase
+{
+    private const URL = 'https://example.com';
+
+    private function createContext(string $html = '<html></html>'): DetectionContext
+    {
+        return new DetectionContext(
+            originalUrl: self::URL,
+            finalUrl: self::URL,
+            html: $html,
+            statusCode: 200,
+        );
+    }
+
+    private function createDetector(iterable $rules): TYPO3Detector
+    {
+        return new TYPO3Detector($rules, new ConfidenceCalculator());
+    }
+
+    /**
+     * @param array{matched: bool, weight: int, metadata: array<string, mixed>} $result
+     */
+    private function createRule(array $result): RuleInterface
+    {
+        $rule = $this->createMock(RuleInterface::class);
+        $rule->method('evaluate')->willReturn($result);
+
+        return $rule;
+    }
+
+    /**
+     * @param array<string, mixed> $metadata
+     *
+     * @return array{matched: bool, weight: int, metadata: array<string, mixed>}
+     */
+    private function createMatchedRuleResult(int $weight = 35, array $metadata = []): array
+    {
+        return [
+            'matched' => true,
+            'weight' => $weight,
+            'metadata' => $metadata,
+        ];
+    }
+
+    /**
+     * @return array{matched: bool, weight: int, metadata: array<string, mixed>}
+     */
+    private function createUnmatchedRuleResult(int $weight = 35): array
+    {
+        return [
+            'matched' => false,
+            'weight' => $weight,
+            'metadata' => [],
+        ];
+    }
+
+    public function test_returns_no_detection_when_confidence_is_zero(): void
+    {
+        $detector = $this->createDetector([
+            $this->createRule($this->createUnmatchedRuleResult()),
+        ]);
+
+        $result = $detector->detect($this->createContext());
+
+        self::assertFalse($result->isDetected());
+        self::assertSame(0, $result->confidence());
+        self::assertSame([], $result->metadata());
+        self::assertNull($result->theme());
+        self::assertSame([], $result->plugins());
+    }
+
+    public function test_returns_detection_when_confidence_is_positive(): void
+    {
+        $detector = $this->createDetector([
+            $this->createRule($this->createMatchedRuleResult(80)),
+        ]);
+
+        $result = $detector->detect($this->createContext());
+
+        self::assertTrue($result->isDetected());
+        self::assertSame(80, $result->confidence());
+    }
+
+    public function test_executes_every_rule(): void
+    {
+        $html = '<html></html>';
+        $order = [];
+        $rules = [];
+
+        foreach (['A', 'B', 'C'] as $name) {
+            $rule = $this->createMock(RuleInterface::class);
+            $rule->expects(self::once())
+                ->method('evaluate')
+                ->with($html, self::URL)
+                ->willReturnCallback(function () use (&$order, $name): array {
+                    $order[] = $name;
+
+                    return $this->createUnmatchedRuleResult();
+                });
+            $rules[] = $rule;
+        }
+
+        $detector = $this->createDetector($rules);
+        $detector->detect($this->createContext($html));
+
+        self::assertSame(['A', 'B', 'C'], $order);
+    }
+
+    public function test_passes_all_rule_results_to_confidence_calculator(): void
+    {
+        $detector = $this->createDetector([
+            $this->createRule($this->createMatchedRuleResult(10)),
+            $this->createRule($this->createMatchedRuleResult(20)),
+            $this->createRule($this->createMatchedRuleResult(30)),
+        ]);
+
+        $result = $detector->detect($this->createContext());
+
+        self::assertSame(60, $result->confidence());
+    }
+
+    public function test_merges_metadata_from_multiple_rules(): void
+    {
+        $detector = $this->createDetector([
+            $this->createRule($this->createMatchedRuleResult(35, ['generator' => 'TYPO3'])),
+            $this->createRule($this->createMatchedRuleResult(20, ['asset_path' => '/typo3/'])),
+        ]);
+
+        $result = $detector->detect($this->createContext());
+
+        self::assertSame('TYPO3', $result->metadata()['generator']);
+        self::assertSame('/typo3/', $result->metadata()['asset_path']);
+    }
+
+    public function test_later_metadata_overwrites_previous_values(): void
+    {
+        $detector = $this->createDetector([
+            $this->createRule($this->createMatchedRuleResult(35, ['generator' => 'TYPO3 OLD'])),
+            $this->createRule($this->createMatchedRuleResult(25, ['generator' => 'TYPO3'])),
+        ]);
+
+        $result = $detector->detect($this->createContext());
+
+        self::assertSame('TYPO3', $result->metadata()['generator']);
+    }
+
+    public function test_collects_matched_rule_names(): void
+    {
+        $html = '<meta name="generator" content="TYPO3">'
+            . '<script>TYPO3 = {};</script>';
+
+        $detector = $this->createDetector([new MetaGeneratorRule(), new ScriptFingerprintRule()]);
+        $result = $detector->detect($this->createContext($html));
+
+        self::assertSame(
+            ['MetaGeneratorRule', 'ScriptFingerprintRule'],
+            $result->metadata()['matched_rules'],
+        );
+    }
+
+    public function test_ignores_unmatched_rules(): void
+    {
+        $html = '<meta name="generator" content="TYPO3">';
+
+        $detector = $this->createDetector([new MetaGeneratorRule(), new AssetPathRule()]);
+        $result = $detector->detect($this->createContext($html));
+
+        self::assertSame(['MetaGeneratorRule'], $result->metadata()['matched_rules']);
+        self::assertArrayHasKey('generator', $result->metadata());
+    }
+
+    public function test_returns_detection_result(): void
+    {
+        $detector = $this->createDetector([
+            $this->createRule($this->createMatchedRuleResult()),
+        ]);
+
+        $result = $detector->detect($this->createContext());
+
+        self::assertInstanceOf(DetectionResult::class, $result);
+        self::assertSame('TYPO3', $result->technology());
+    }
+}
