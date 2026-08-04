@@ -4,75 +4,93 @@ declare(strict_types=1);
 
 namespace App\Core;
 
-use RuntimeException;
+use App\Core\Exceptions\ServiceNotFoundException;
 
 /**
  * Lightweight dependency injection container for the Kernel Framework.
  *
- * The container is responsible for constructing and resolving application
- * services. It centralizes object creation and dependency management while
- * performing no business logic.
+ * The container registers, resolves, and caches application services under
+ * string identifiers. It centralizes object creation and dependency
+ * management while keeping the framework loosely coupled, and performs no
+ * business logic itself.
  *
- * Services are registered by identifier with a factory callable or a
- * pre-built object, resolved lazily on first access, and cached so that
- * every subsequent access returns the same singleton instance.
+ * Services are registered with either a pre-built object instance or a lazy
+ * factory callable. Factories are executed at most once, on first access,
+ * and the resulting instance is cached for the lifetime of the container.
  *
  * Responsibilities:
  *
  * - Register services under a string identifier.
- * - Resolve registered services on demand.
- * - Return singleton instances.
+ * - Resolve registered services lazily on demand.
+ * - Cache resolved instances as singletons.
  *
  * Design philosophy:
  *
- * - Dependency Injection and Inversion of Control: services never
- *   construct their collaborators; the container wires them.
- * - Single Responsibility Principle: the container registers and resolves
- *   services only. It contains no application logic.
- * - Lazy service resolution: factories run only when a service is first
+ * - Dependency Injection: services receive their collaborators through the
+ *   container rather than constructing them directly.
+ * - Inversion of Control: the container owns creation and lifetime; the
+ *   rest of the application only requests services.
+ * - Single Responsibility Principle: the container only registers and
+ *   resolves services. It contains no application logic.
+ * - Lazy resolution: factory callables run only when a service is first
  *   requested.
- * - Singleton service lifetime: each service is resolved once and reused.
+ * - Singleton lifetime: each service resolves to exactly one instance.
  * - The container is stateless except for the service registry itself.
+ * - Deterministic: resolution depends solely on the service registry.
  */
 final class Container
 {
-    /** @var array<string, callable> */
+    /**
+     * Registered service factories.
+     *
+     * Each entry is a lazy factory callable, invoked with the container as
+     * its only argument the first time the service is resolved.
+     *
+     * @var array<string, callable(Container): object>
+     */
     private array $definitions = [];
 
-    /** @var array<string, object> */
+    /**
+     * Cached singleton instances.
+     *
+     * Each entry is a fully resolved service instance, cached so that every
+     * subsequent resolution returns the exact same object.
+     *
+     * @var array<string, object>
+     */
     private array $instances = [];
-
-    /** @var array<string, true> */
-    private array $resolving = [];
 
     /**
      * Register a service under the given identifier.
      *
-     * When the definition is a callable it acts as a lazy factory invoked
-     * with the container as its only argument on first resolution. When
-     * the definition is an object it is registered directly and returned
-     * as-is. Re-registering an identifier replaces the previous
-     * definition.
+     * An object definition is cached immediately as an already-resolved
+     * singleton. A callable definition acts as a lazy factory invoked with
+     * the container as its only argument on first resolution.
+     * Re-registering an identifier replaces the previous definition and any
+     * cached instance.
      *
-     * @param string        $id         The service identifier.
+     * @param string          $id         The service identifier.
      * @param callable|object $definition The factory callable or pre-built
      *                                    service instance.
      */
     public function set(string $id, callable|object $definition): void
     {
-        if (is_object($definition)) {
-            $this->instances[$id] = $definition;
-            unset($this->definitions[$id]);
+        if (is_callable($definition)) {
+            $this->definitions[$id] = $definition;
+            unset($this->instances[$id]);
 
             return;
         }
 
-        $this->definitions[$id] = $definition;
-        unset($this->instances[$id]);
+        $this->instances[$id] = $definition;
+        unset($this->definitions[$id]);
     }
 
     /**
      * Determine whether a service has been registered.
+     *
+     * Returns true only for identifiers registered via set(); unknown
+     * identifiers are never resolved automatically.
      *
      * @param string $id The service identifier.
      */
@@ -82,19 +100,19 @@ final class Container
     }
 
     /**
-     * Resolve a service and return its singleton instance.
+     * Resolve a service and return its cached instance.
      *
-     * The service is resolved lazily on first access and cached, so every
-     * subsequent call returns the same instance.
+     * A cached singleton is returned immediately. Otherwise the registered
+     * factory is invoked with the container as its only argument. Factories
+     * are executed at most once; every call returns the exact same object
+     * instance.
      *
      * @param string $id The service identifier.
      *
      * @return object The resolved singleton instance.
      *
-     * @throws RuntimeException When the service has not been registered,
-     *                          when its factory resolves to a non-object
-     *                          value, or when a circular dependency is
-     *                          detected.
+     * @throws ServiceNotFoundException When no service has been registered
+     *                                  under the given identifier.
      */
     public function get(string $id): object
     {
@@ -102,26 +120,12 @@ final class Container
             return $this->instances[$id];
         }
 
-        if (!isset($this->definitions[$id])) {
-            throw new RuntimeException("Service [{$id}] has not been registered.");
+        $definition = $this->definitions[$id] ?? null;
+
+        if ($definition === null) {
+            throw new ServiceNotFoundException(sprintf('Service "%s" is not registered.', $id));
         }
 
-        if (isset($this->resolving[$id])) {
-            throw new RuntimeException("Circular dependency detected while resolving [{$id}].");
-        }
-
-        $this->resolving[$id] = true;
-
-        try {
-            $instance = ($this->definitions[$id])($this);
-
-            if (!is_object($instance)) {
-                throw new RuntimeException("Service [{$id}] resolved to a non-object value.");
-            }
-
-            return $this->instances[$id] = $instance;
-        } finally {
-            unset($this->resolving[$id]);
-        }
+        return $this->instances[$id] = $definition($this);
     }
 }
