@@ -7,33 +7,47 @@ namespace App\Modules\Detection;
 use App\Modules\Http\HttpResponse;
 
 /**
- * Factory for creating immutable DetectionContext objects from
- * HttpResponse instances.
+ * Creates immutable DetectionContext instances from HttpResponse objects.
  *
- * This class bridges the HTTP Infrastructure layer and the Detection
- * Engine. It converts transport-layer responses into the DetectionContext
- * objects consumed by DetectionManager. It performs object mapping only.
+ * DetectionContextFactory centralizes all DetectionContext creation and
+ * acts as the single translation layer between the HTTP module and the
+ * Detection Engine. It performs object creation only.
  *
  * Responsibilities:
  *
- * - Convert an immutable HttpResponse into an immutable DetectionContext.
+ * - Create DetectionContext objects from HttpResponse instances.
  * - Preserve the original URL, final URL, HTML body, and status code
- *   across the conversion.
+ *   across the translation.
  *
  * Design philosophy:
  *
- * - Single Responsibility Principle: this is a pure mapper. It performs
- *   no HTTP requests, no HTML parsing, no HTML normalization, and no CMS
- *   detection.
- * - The factory is stateless, deterministic, and side-effect free. Given
- *   the same HttpResponse it always produces the same DetectionContext.
+ * - Factory: object creation is centralized and reusable.
+ * - Value Object creation: the produced context is immutable.
+ * - Single Responsibility Principle: a pure translation layer. It performs
+ *   no HTTP requests, no CMS detection, no confidence calculation, and no
+ *   HTML parsing.
+ * - Dependency Injection friendly: stateless, side-effect free, and
+ *   deterministic. Given the same response it always produces the same
+ *   context.
  * - It knows nothing about WordPress, Joomla, Drupal, Ghost, TYPO3, theme
  *   extraction, or plugin detection.
+ *
+ * Future architecture:
+ *
+ * - Future versions may populate DetectionContext with headers, cookies,
+ *   content type, redirect chain, response time, encoding, language, and
+ *   TLS information.
+ * - The factory must remain the only class that translates HttpResponse
+ *   into DetectionContext; WebsiteDetector must never construct
+ *   DetectionContext directly.
  */
-final readonly class DetectionContextFactory
+readonly class DetectionContextFactory
 {
     /**
-     * Convert an HttpResponse into a DetectionContext.
+     * Convert an HttpResponse into an immutable DetectionContext.
+     *
+     * Values are copied verbatim: no validation, modification, or
+     * transformation is applied.
      *
      * @param HttpResponse $response The immutable HTTP response.
      *

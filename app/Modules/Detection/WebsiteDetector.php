@@ -7,65 +7,73 @@ namespace App\Modules\Detection;
 use App\Modules\Http\HttpClientInterface;
 
 /**
- * Public entry point for the Detection Engine.
+ * Public entry point for the ThemeDetectorTool Detection Engine.
  *
- * Orchestrates the complete detection pipeline and hides all
- * infrastructure details from consumers. A caller only supplies a website
- * URL and receives a DetectionResult.
+ * WebsiteDetector coordinates the complete website detection workflow: it
+ * retrieves the target website using the HTTP client, delegates
+ * DetectionContext creation to the DetectionContextFactory, hands the
+ * context to the DetectionManager, and returns the DetectionResult.
+ *
+ * WebsiteDetector is the only class external consumers should interact
+ * with for CMS detection.
  *
  * Responsibilities:
  *
- * - Fetch the website's response through an HttpClientInterface.
- * - Convert the HttpResponse into a DetectionContext.
- * - Delegate detection to the DetectionManager and return its result.
+ * - Retrieve the target website via the HTTP client.
+ * - Delegate DetectionContext creation to the DetectionContextFactory.
+ * - Delegate detection to the DetectionManager.
+ * - Return the DetectionResult.
  *
  * Design philosophy:
  *
- * - Single Responsibility Principle: this is a facade and pipeline
- *   orchestrator only. It contains no CMS detection logic, performs no
- *   HTML parsing, calculates no confidence, and merges no metadata.
- * - Dependency Inversion Principle: it depends on the
- *   HttpClientInterface abstraction and the DetectionManager, never on
- *   concrete technologies (WordPress, Joomla, Drupal, Ghost, TYPO3, etc.)
- *   or concrete HTTP transports.
- * - The facade is stateless and deterministic except for the network I/O
- *   inherent to performing a request, and side-effect free except for the
+ * - Facade: it is the single public entry point for the Detection Engine.
+ * - Orchestrator: it wires the workflow steps together and nothing more.
+ * - Dependency Injection: collaborators are provided through the
+ *   constructor.
+ * - Single Responsibility Principle: coordination only; it contains no
+ *   CMS detection logic, confidence calculation, or HTML parsing.
+ * - Open/Closed Principle: new detection strategies are added without
+ *   modifying this class.
+ * - Stateless, deterministic, and side-effect free except for the
  *   delegated HTTP request.
  */
 final readonly class WebsiteDetector
 {
     /**
-     * Create the detection pipeline.
+     * Create a new WebsiteDetector.
      *
-     * @param HttpClientInterface      $httpClient       Performs the outbound
-     *                                                   HTTP request.
-     * @param DetectionContextFactory  $contextFactory   Converts the HTTP
-     *                                                   response into a
-     *                                                   DetectionContext.
-     * @param DetectionManager         $detectionManager Coordinates the
-     *                                                   registered detectors.
+     * @param HttpClientInterface       $httpClient The HTTP client used to
+     *                                              retrieve target websites.
+     * @param DetectionManager          $manager    The DetectionManager that
+     *                                              performs CMS detection.
+     * @param DetectionContextFactory   $factory    The factory that creates
+     *                                              DetectionContext objects.
      */
     public function __construct(
         private HttpClientInterface $httpClient,
-        private DetectionContextFactory $contextFactory,
-        private DetectionManager $detectionManager,
+        private DetectionManager $manager,
+        private DetectionContextFactory $factory,
     ) {
     }
 
     /**
-     * Detect the technology of a website by URL.
+     * Detect the CMS of the website at the given URL.
      *
-     * @param string $url The website URL to detect.
+     * Retrieves the website via the HTTP client, creates the
+     * DetectionContext through the DetectionContextFactory, delegates
+     * detection to the DetectionManager, and returns the resulting
+     * DetectionResult.
      *
-     * @return DetectionResult The detection result with the highest
-     *                         confidence.
+     * @param string $url The absolute URL of the website to detect.
+     *
+     * @return DetectionResult The detection result.
      */
     public function detect(string $url): DetectionResult
     {
         $response = $this->httpClient->get($url);
 
-        $context = $this->contextFactory->create($response);
+        $context = $this->factory->create($response);
 
-        return $this->detectionManager->detect($context);
+        return $this->manager->detect($context);
     }
 }

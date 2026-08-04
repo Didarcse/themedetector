@@ -107,9 +107,12 @@ final class Container
      * are executed at most once; every call returns the exact same object
      * instance.
      *
-     * @param string $id The service identifier.
+     * @template T of object
      *
-     * @return object The resolved singleton instance.
+     * @param class-string<T>|string $id The service identifier.
+     *
+     * @return ($id is class-string<T> ? T : object) The resolved singleton
+     *                                              instance.
      *
      * @throws ServiceNotFoundException When no service has been registered
      *                                  under the given identifier.

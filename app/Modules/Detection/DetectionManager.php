@@ -35,7 +35,7 @@ use RuntimeException;
  * - The manager is stateless, deterministic, and side-effect free: given
  *   the same registry and context, it always returns the same result.
  */
-final readonly class DetectionManager
+readonly class DetectionManager
 {
     public function __construct(
         private DetectorRegistry $registry,
