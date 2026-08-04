@@ -4,44 +4,75 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Core\Container;
+
 /**
- * Root application container holding base path and configuration.
+ * Composition root for the Kernel Framework.
+ *
+ * Application bootstraps the framework, registers core services, and
+ * exposes the dependency injection container. It coordinates framework
+ * startup only and performs no business logic.
+ *
+ * Responsibilities:
+ *
+ * - Bootstrap the framework.
+ * - Register framework-level services.
+ * - Expose the dependency injection container.
+ *
+ * Design philosophy:
+ *
+ * - Composition Root: all framework wiring happens here.
+ * - Single Responsibility Principle: framework bootstrap only.
+ * - Dependency Injection and Inversion of Control: services are wired
+ *   through the container rather than constructed by consumers.
+ * - The application is stateless except for the owned container.
+ * - Deterministic: startup produces the same registry on every run.
  */
 final class Application
 {
-    public function __construct(
-        private readonly string $basePath,
-        private readonly array $config = [],
-    ) {}
+    /**
+     * The application's dependency injection container.
+     *
+     * All framework-level services are registered with this container
+     * during boot().
+     *
+     * @var Container
+     */
+    private Container $container;
 
-    public function basePath(): string
+    /**
+     * Create a new application and its dependency injection container.
+     */
+    public function __construct()
     {
-        return $this->basePath;
+        $this->container = new Container();
     }
 
-    public function config(): array
+    /**
+     * Return the application's dependency injection container.
+     */
+    public function container(): Container
     {
-        return $this->config;
+        return $this->container;
     }
 
-    public function path(string $path = ''): string
+    /**
+     * Bootstrap the framework.
+     *
+     * Registers every framework-level service with the container. The
+     * method is idempotent: calling it multiple times does not change the
+     * application state.
+     *
+     * Current registrations:
+     *
+     * - Container::class bound to the current container instance.
+     *
+     * @return void
+     */
+    public function boot(): void
     {
-        return $this->basePath . ($path !== '' ? DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR . '/') : '');
-    }
-
-    public function configValue(string $key, mixed $default = null): mixed
-    {
-        $segments = explode('.', $key);
-        $current = $this->config;
-
-        foreach ($segments as $segment) {
-            if (!is_array($current) || !array_key_exists($segment, $current)) {
-                return $default;
-            }
-
-            $current = $current[$segment];
+        if (!$this->container->has(Container::class)) {
+            $this->container->set(Container::class, $this->container);
         }
-
-        return $current;
     }
 }
