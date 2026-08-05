@@ -24,5 +24,7 @@ $kernel = require dirname(__DIR__) . '/bootstrap/app.php';
 
 $request = Request::fromGlobals();
 
+$GLOBALS['app']->set(Request::class, $request);
+
 $response = $kernel->handle($request);
 $response->send();
