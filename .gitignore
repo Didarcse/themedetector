@@ -23,6 +23,7 @@ Thumbs.db
 
 # Cache
 /storage/cache/*
+/storage/phpstan/
 
 # Uploads
 /storage/uploads/*
