@@ -137,8 +137,10 @@ final class PluginMetadataMapperTest extends TestCase
     {
         $raw = $this->raw('contact-form-7', confidence: 30, extra: ['source' => 'plugin-path']);
 
-        $this->map($raw);
+        $mapped = $this->map($raw);
 
+        self::assertInstanceOf(PluginMetadata::class, $mapped);
+        self::assertNotSame($raw, $mapped);
         self::assertSame('contact-form-7', $raw->slug());
         self::assertSame(30, $raw->confidence());
         self::assertSame(['source' => 'plugin-path'], $raw->extra());

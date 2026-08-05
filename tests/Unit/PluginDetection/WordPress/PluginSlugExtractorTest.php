@@ -221,8 +221,10 @@ final class PluginSlugExtractorTest extends TestCase
 
         $expected = $ruleResult;
 
-        $this->extract($ruleResult);
+        $raw = $this->extract($ruleResult);
 
+        self::assertNotNull($raw);
+        self::assertNotSame($ruleResult, $raw);
         self::assertSame($expected, $ruleResult);
     }
 
