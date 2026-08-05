@@ -27,11 +27,7 @@ final class Dispatcher
             return $this->dispatchController($handler);
         }
 
-        if (is_callable($handler)) {
-            return $this->dispatchCallable($handler);
-        }
-
-        throw new RuntimeException('Invalid handler type.');
+        return $this->dispatchCallable($handler);
     }
 
     private function dispatchCallable(callable $handler): Response
@@ -41,18 +37,12 @@ final class Dispatcher
         return $this->wrapResult($result);
     }
 
+    /**
+     * @param array{0: class-string, 1: string} $handler
+     */
     private function dispatchArray(array $handler): Response
     {
-        if (count($handler) !== 2) {
-            throw new RuntimeException('Controller array handler must contain exactly two elements.');
-        }
-
-        $controllerClass = $handler[0];
-        $method = $handler[1];
-
-        if (!is_string($controllerClass) || !is_string($method)) {
-            throw new RuntimeException('Invalid controller array handler.');
-        }
+        [$controllerClass, $method] = $handler;
 
         $controller = $this->resolveController($controllerClass);
 

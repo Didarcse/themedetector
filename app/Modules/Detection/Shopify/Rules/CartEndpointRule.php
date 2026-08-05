@@ -159,7 +159,7 @@ final class CartEndpointRule implements RuleInterface
      * A total score of at least 5 (out of 11) is required for a valid
      * Shopify cart response.
      *
-     * @param array<string, mixed> $payload
+     * @param array<mixed> $payload
      */
     private function isValidCartResponse(array $payload): bool
     {

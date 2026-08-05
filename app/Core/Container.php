@@ -131,4 +131,28 @@ final class Container
 
         return $this->instances[$id] = $definition($this);
     }
+
+    /**
+     * Resolve a service and return its cached instance.
+     *
+     * Framework-facing resolution entry point. Resolves a registered
+     * service exactly like get(): a cached singleton is returned
+     * immediately, otherwise the registered factory is invoked with the
+     * container as its only argument and the instance is cached. Services
+     * not registered via set() are never resolved automatically.
+     *
+     * @template T of object
+     *
+     * @param class-string<T>|string $id The service identifier.
+     *
+     * @return ($id is class-string<T> ? T : object) The resolved singleton
+     *                                              instance.
+     *
+     * @throws ServiceNotFoundException When no service has been registered
+     *                                  under the given identifier.
+     */
+    public function make(string $id): object
+    {
+        return $this->get($id);
+    }
 }

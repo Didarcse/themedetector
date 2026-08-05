@@ -1,0 +1,10 @@
+parameters:
+	level: max
+
+	paths:
+		- app
+		- tests
+
+	phpVersion: 80200
+
+	tmpDir: storage/phpstan

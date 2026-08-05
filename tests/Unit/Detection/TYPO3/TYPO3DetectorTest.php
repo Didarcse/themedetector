@@ -28,6 +28,9 @@ final class TYPO3DetectorTest extends TestCase
         );
     }
 
+    /**
+     * @param iterable<RuleInterface> $rules
+     */
     private function createDetector(iterable $rules): TYPO3Detector
     {
         return new TYPO3Detector($rules, new ConfidenceCalculator());

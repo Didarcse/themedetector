@@ -17,7 +17,7 @@ final class WebflowBadgeRuleTest extends TestCase
     }
 
     /**
-     * @return array{matched: bool, weight: int, metadata: array<string, string>}
+     * @return array{matched: bool, confidence: int, metadata: array<string, mixed>}
      */
     private function evaluate(string $html): array
     {
@@ -88,10 +88,10 @@ final class WebflowBadgeRuleTest extends TestCase
         self::assertFalse($result['matched']);
     }
 
-    public function test_returns_expected_weight(): void
+    public function test_returns_expected_confidence(): void
     {
         $result = $this->evaluate('<a href="https://webflow.com"></a>');
 
-        self::assertSame(10, $result['weight']);
+        self::assertSame(10, $result['confidence']);
     }
 }

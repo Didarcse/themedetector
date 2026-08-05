@@ -14,7 +14,7 @@ use DOMXPath;
  */
 final readonly class DataAttributesRule implements RuleInterface
 {
-    private const WEIGHT = 15;
+    private const CONFIDENCE = 15;
 
     private const ATTRIBUTES = [
         'data-wf-page',
@@ -27,7 +27,7 @@ final readonly class DataAttributesRule implements RuleInterface
      * @param string $html The raw HTML response body.
      * @param string $url  The final request URL (unused in this rule).
      *
-     * @return array{matched: bool, weight: int, metadata: array<string,mixed>}
+     * @return array{matched: bool, confidence: int, metadata: array<string, mixed>}
      */
     public function evaluate(string $html, string $url): array
     {
@@ -49,7 +49,7 @@ final readonly class DataAttributesRule implements RuleInterface
             if ($nodes !== false && $nodes->length > 0) {
                 return [
                     'matched' => true,
-                    'weight' => self::WEIGHT,
+                    'confidence' => self::CONFIDENCE,
                     'metadata' => [
                         'wf_attribute' => $attribute,
                     ],
@@ -59,7 +59,7 @@ final readonly class DataAttributesRule implements RuleInterface
 
         return [
             'matched' => false,
-            'weight' => self::WEIGHT,
+            'confidence' => self::CONFIDENCE,
             'metadata' => [],
         ];
     }

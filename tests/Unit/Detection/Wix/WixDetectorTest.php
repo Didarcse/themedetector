@@ -28,6 +28,9 @@ final class WixDetectorTest extends TestCase
         );
     }
 
+    /**
+     * @param iterable<RuleInterface> $rules
+     */
     private function createDetector(iterable $rules): WixDetector
     {
         return new WixDetector($rules, new ConfidenceCalculator());

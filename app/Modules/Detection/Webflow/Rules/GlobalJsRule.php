@@ -12,7 +12,7 @@ namespace App\Modules\Detection\Webflow\Rules;
  */
 final readonly class GlobalJsRule implements RuleInterface
 {
-    private const WEIGHT = 25;
+    private const CONFIDENCE = 25;
 
     private const FINGERPRINTS = [
         'webflow.js',
@@ -27,7 +27,7 @@ final readonly class GlobalJsRule implements RuleInterface
      * @param string $html The raw HTML response body.
      * @param string $url  The final request URL (unused in this rule).
      *
-     * @return array{matched: bool, weight: int, metadata: array<string,mixed>}
+     * @return array{matched: bool, confidence: int, metadata: array<string, mixed>}
      */
     public function evaluate(string $html, string $url): array
     {
@@ -37,7 +37,7 @@ final readonly class GlobalJsRule implements RuleInterface
             if (str_contains($lower, strtolower($fingerprint))) {
                 return [
                     'matched' => true,
-                    'weight' => self::WEIGHT,
+                    'confidence' => self::CONFIDENCE,
                     'metadata' => [
                         'js_fingerprint' => $fingerprint,
                     ],
@@ -47,7 +47,7 @@ final readonly class GlobalJsRule implements RuleInterface
 
         return [
             'matched' => false,
-            'weight' => self::WEIGHT,
+            'confidence' => self::CONFIDENCE,
             'metadata' => [],
         ];
     }

@@ -11,9 +11,12 @@ final class Route
 {
     private readonly string $method;
     private readonly string $uri;
-    /** @var callable|array|string */
+    /** @var \Closure|array{0: class-string, 1: string}|string */
     private readonly mixed $handler;
 
+    /**
+     * @param \Closure|array{0: class-string, 1: string}|string $handler
+     */
     public function __construct(
         string $method,
         string $uri,
@@ -38,6 +41,7 @@ final class Route
         return $this->uri;
     }
 
+    /** @return \Closure|array{0: class-string, 1: string}|string */
     public function handler(): callable|array|string
     {
         return $this->handler;

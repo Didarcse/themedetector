@@ -28,6 +28,9 @@ final class SquarespaceDetectorTest extends TestCase
         );
     }
 
+    /**
+     * @param iterable<RuleInterface> $rules
+     */
     private function createDetector(iterable $rules): SquarespaceDetector
     {
         return new SquarespaceDetector($rules, new ConfidenceCalculator());

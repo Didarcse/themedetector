@@ -28,6 +28,9 @@ final class JoomlaDetectorTest extends TestCase
         );
     }
 
+    /**
+     * @param iterable<RuleInterface> $rules
+     */
     private function createDetector(iterable $rules): JoomlaDetector
     {
         return new JoomlaDetector($rules, new ConfidenceCalculator());

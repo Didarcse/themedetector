@@ -17,7 +17,7 @@ final class MetaGeneratorRuleTest extends TestCase
     }
 
     /**
-     * @return array{matched: bool, weight: int, metadata: array<string, string>}
+     * @return array{matched: bool, confidence: int, metadata: array<string, mixed>}
      */
     private function evaluate(string $html): array
     {
@@ -66,11 +66,11 @@ final class MetaGeneratorRuleTest extends TestCase
         self::assertFalse($result['matched']);
     }
 
-    public function test_returns_expected_weight(): void
+    public function test_returns_expected_confidence(): void
     {
         $result = $this->evaluate('<meta name="generator" content="Webflow">');
 
-        self::assertSame(35, $result['weight']);
+        self::assertSame(35, $result['confidence']);
     }
 
     public function test_returns_generator_metadata(): void

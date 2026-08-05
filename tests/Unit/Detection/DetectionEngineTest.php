@@ -89,7 +89,8 @@ final class DetectionEngineTest extends TestCase
         $engine = new DetectionEngine(new DetectorRegistry([$detector]));
         $output = $engine->detect($this->createContext());
 
-        self::assertContainsOnlyInstancesOf(DetectionResult::class, $output);
+        self::assertCount(1, $output);
+        self::assertSame('Shopify', $output[0]->technology());
     }
 
     public function test_handles_empty_registry(): void

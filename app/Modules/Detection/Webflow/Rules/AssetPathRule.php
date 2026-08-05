@@ -15,7 +15,7 @@ use DOMDocument;
  */
 final readonly class AssetPathRule implements RuleInterface
 {
-    private const WEIGHT = 15;
+    private const CONFIDENCE = 15;
 
     private const HOSTNAMES = [
         'assets.website-files.com',
@@ -35,7 +35,7 @@ final readonly class AssetPathRule implements RuleInterface
      * @param string $html The raw HTML response body.
      * @param string $url  The final request URL (unused in this rule).
      *
-     * @return array{matched: bool, weight: int, metadata: array<string,mixed>}
+     * @return array{matched: bool, confidence: int, metadata: array<string, mixed>}
      */
     public function evaluate(string $html, string $url): array
     {
@@ -65,7 +65,7 @@ final readonly class AssetPathRule implements RuleInterface
                     if (str_contains($value, $hostname)) {
                         return [
                             'matched' => true,
-                            'weight' => self::WEIGHT,
+                            'confidence' => self::CONFIDENCE,
                             'metadata' => [
                                 'asset_host' => $hostname,
                             ],
@@ -77,7 +77,7 @@ final readonly class AssetPathRule implements RuleInterface
 
         return [
             'matched' => false,
-            'weight' => self::WEIGHT,
+            'confidence' => self::CONFIDENCE,
             'metadata' => [],
         ];
     }

@@ -88,7 +88,7 @@ final class WPJsonRule implements RuleInterface
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param array<mixed> $data
      *
      * @return array<string, mixed>
      */
@@ -122,7 +122,7 @@ final class WPJsonRule implements RuleInterface
     }
 
     /**
-     * @return array{matched: false, confidence: 0, metadata: array}
+     * @return array{matched: false, confidence: 0, metadata: array<string, mixed>}
      */
     private function noMatch(): array
     {

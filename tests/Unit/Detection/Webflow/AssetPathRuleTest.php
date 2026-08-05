@@ -17,7 +17,7 @@ final class AssetPathRuleTest extends TestCase
     }
 
     /**
-     * @return array{matched: bool, weight: int, metadata: array<string, string>}
+     * @return array{matched: bool, confidence: int, metadata: array<string, mixed>}
      */
     private function evaluate(string $html): array
     {
@@ -138,12 +138,12 @@ final class AssetPathRuleTest extends TestCase
         self::assertFalse($result['matched']);
     }
 
-    public function test_returns_expected_weight(): void
+    public function test_returns_expected_confidence(): void
     {
         $result = $this->evaluate(
             '<link href="https://assets.website-files.com/css/site.css">'
         );
 
-        self::assertSame(15, $result['weight']);
+        self::assertSame(15, $result['confidence']);
     }
 }

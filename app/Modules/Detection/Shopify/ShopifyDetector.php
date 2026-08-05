@@ -74,10 +74,35 @@ final class ShopifyDetector implements DetectorInterface
             theme: isset($mergedMetadata['theme_name']) && is_string($mergedMetadata['theme_name'])
                 ? $mergedMetadata['theme_name']
                 : null,
-            plugins: isset($mergedMetadata['plugins']) && is_array($mergedMetadata['plugins'])
-                ? $mergedMetadata['plugins']
-                : [],
+            plugins: $this->extractPlugins($mergedMetadata),
             metadata: $mergedMetadata,
         );
+    }
+
+    /**
+     * Extract the detected plugin list from the merged rule metadata.
+     *
+     * Only string entries are retained, guaranteeing the result is a
+     * list<string> regardless of the metadata content.
+     *
+     * @param array<string, mixed> $metadata The merged rule metadata.
+     *
+     * @return list<string> The detected plugin names.
+     */
+    private function extractPlugins(array $metadata): array
+    {
+        if (!isset($metadata['plugins']) || !is_array($metadata['plugins'])) {
+            return [];
+        }
+
+        $plugins = [];
+
+        foreach ($metadata['plugins'] as $plugin) {
+            if (is_string($plugin)) {
+                $plugins[] = $plugin;
+            }
+        }
+
+        return $plugins;
     }
 }

@@ -15,6 +15,9 @@ final class View
         private readonly string $viewsPath,
     ) {}
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function render(string $view, array $data = [], ?string $layout = null): string
     {
         $content = $this->renderFile($this->resolvePath($view), $data);
@@ -29,6 +32,9 @@ final class View
         );
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     private function renderFile(string $path, array $data): string
     {
         if (!is_file($path)) {

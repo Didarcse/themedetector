@@ -67,13 +67,44 @@ final class Request
 
     public static function fromGlobals(): self
     {
-        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-        $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-        $query = $_GET;
-        $post = $_POST;
-        $server = $_SERVER;
+        $method = self::stringValue($_SERVER['REQUEST_METHOD'] ?? null) ?? 'GET';
+        $requestUri = self::stringValue($_SERVER['REQUEST_URI'] ?? null) ?? '/';
+        $uri = parse_url($requestUri, PHP_URL_PATH);
 
-        return new self($method, $uri, $query, $post, $server);
+        if ($uri === false || $uri === null) {
+            $uri = '/';
+        }
+
+        return new self(
+            $method,
+            $uri,
+            self::superglobal($_GET),
+            self::superglobal($_POST),
+            self::superglobal($_SERVER),
+        );
+    }
+
+    private static function stringValue(mixed $value): ?string
+    {
+        return is_string($value) ? $value : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function superglobal(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($value as $key => $item) {
+            $normalized[(string) $key] = $item;
+        }
+
+        return $normalized;
     }
 
     public function input(string $key, mixed $default = null): mixed

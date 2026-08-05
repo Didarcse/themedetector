@@ -27,13 +27,16 @@ final class WebflowDetectorTest extends TestCase
         );
     }
 
+    /**
+     * @param iterable<RuleInterface> $rules
+     */
     private function createDetector(iterable $rules): WebflowDetector
     {
         return new WebflowDetector($rules, new ConfidenceCalculator());
     }
 
     /**
-     * @param array{matched: bool, weight: int, metadata: array<string, mixed>} $result
+     * @param array{matched: bool, confidence: int, metadata: array<string, mixed>} $result
      */
     private function createRule(array $result): RuleInterface
     {
@@ -46,25 +49,25 @@ final class WebflowDetectorTest extends TestCase
     /**
      * @param array<string, mixed> $metadata
      *
-     * @return array{matched: bool, weight: int, metadata: array<string, mixed>}
+     * @return array{matched: bool, confidence: int, metadata: array<string, mixed>}
      */
-    private function createMatchedRuleResult(int $weight = 35, array $metadata = []): array
+    private function createMatchedRuleResult(int $confidence = 35, array $metadata = []): array
     {
         return [
             'matched' => true,
-            'weight' => $weight,
+            'confidence' => $confidence,
             'metadata' => $metadata,
         ];
     }
 
     /**
-     * @return array{matched: bool, weight: int, metadata: array<string, mixed>}
+     * @return array{matched: bool, confidence: int, metadata: array<string, mixed>}
      */
-    private function createUnmatchedRuleResult(int $weight = 35): array
+    private function createUnmatchedRuleResult(int $confidence = 35): array
     {
         return [
             'matched' => false,
-            'weight' => $weight,
+            'confidence' => $confidence,
             'metadata' => [],
         ];
     }

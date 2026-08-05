@@ -14,7 +14,7 @@ use DOMDocument;
  */
 final readonly class MetaGeneratorRule implements RuleInterface
 {
-    private const WEIGHT = 35;
+    private const CONFIDENCE = 35;
 
     private const GENERATOR_NAME = 'Webflow';
 
@@ -24,7 +24,7 @@ final readonly class MetaGeneratorRule implements RuleInterface
      * @param string $html The raw HTML response body.
      * @param string $url  The final request URL (unused in this rule).
      *
-     * @return array{matched: bool, weight: int, metadata: array<string,mixed>}
+     * @return array{matched: bool, confidence: int, metadata: array<string, mixed>}
      */
     public function evaluate(string $html, string $url): array
     {
@@ -50,7 +50,7 @@ final readonly class MetaGeneratorRule implements RuleInterface
             if (stripos($content, self::GENERATOR_NAME) !== false) {
                 return [
                     'matched' => true,
-                    'weight' => self::WEIGHT,
+                    'confidence' => self::CONFIDENCE,
                     'metadata' => [
                         'generator' => 'Webflow',
                     ],
@@ -60,7 +60,7 @@ final readonly class MetaGeneratorRule implements RuleInterface
 
         return [
             'matched' => false,
-            'weight' => self::WEIGHT,
+            'confidence' => self::CONFIDENCE,
             'metadata' => [],
         ];
     }

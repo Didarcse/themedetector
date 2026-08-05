@@ -50,7 +50,13 @@ final class StyleCssParser
 
         $seen = [];
 
-        foreach (preg_split('/\R/', $header) as $line) {
+        $lines = preg_split('/\R/', $header);
+
+        if ($lines === false) {
+            return $result;
+        }
+
+        foreach ($lines as $line) {
             $line = trim($line);
             $line = ltrim($line, '*');
 

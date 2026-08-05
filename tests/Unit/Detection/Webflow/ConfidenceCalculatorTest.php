@@ -15,13 +15,13 @@ final class ConfidenceCalculatorTest extends TestCase
     }
 
     /**
-     * @return array{matched: bool, weight: int, metadata: array<string, mixed>}
+     * @return array{matched: bool, confidence: int, metadata: array<string, mixed>}
      */
-    private function createRuleResult(bool $matched, int $weight): array
+    private function createRuleResult(bool $matched, int $confidence): array
     {
         return [
             'matched' => $matched,
-            'weight' => $weight,
+            'confidence' => $confidence,
             'metadata' => [],
         ];
     }
@@ -46,7 +46,7 @@ final class ConfidenceCalculatorTest extends TestCase
         self::assertSame(0, $result);
     }
 
-    public function test_returns_single_rule_weight(): void
+    public function test_returns_single_rule_confidence(): void
     {
         $calculator = $this->createCalculator();
 

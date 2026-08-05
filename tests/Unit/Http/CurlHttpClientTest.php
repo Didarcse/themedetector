@@ -10,6 +10,7 @@ use App\Modules\Http\CurlHttpClient;
 use App\Modules\Http\Exceptions\HttpClientException;
 use App\Modules\Http\HttpClientInterface;
 use App\Modules\Http\HttpResponse;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -29,8 +30,10 @@ final class CurlHttpClientTest extends TestCase
 
     /**
      * Create a mock CurlAdapterInterface.
+     *
+     * @return CurlAdapterInterface&MockObject
      */
-    private function createAdapter(): CurlAdapterInterface
+    private function createAdapter(): CurlAdapterInterface&MockObject
     {
         return $this->createMock(CurlAdapterInterface::class);
     }

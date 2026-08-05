@@ -14,7 +14,7 @@ use DOMDocument;
  */
 final readonly class WebflowBadgeRule implements RuleInterface
 {
-    private const WEIGHT = 10;
+    private const CONFIDENCE = 10;
 
     /**
      * Evaluate the HTML content for a Webflow branding badge.
@@ -22,7 +22,7 @@ final readonly class WebflowBadgeRule implements RuleInterface
      * @param string $html The raw HTML response body.
      * @param string $url  The final request URL (unused in this rule).
      *
-     * @return array{matched: bool, weight: int, metadata: array<string,mixed>}
+     * @return array{matched: bool, confidence: int, metadata: array<string, mixed>}
      */
     public function evaluate(string $html, string $url): array
     {
@@ -44,7 +44,7 @@ final readonly class WebflowBadgeRule implements RuleInterface
             if ($indicator !== null) {
                 return [
                     'matched' => true,
-                    'weight' => self::WEIGHT,
+                    'confidence' => self::CONFIDENCE,
                     'metadata' => [
                         'badge_indicator' => $indicator,
                     ],
@@ -54,7 +54,7 @@ final readonly class WebflowBadgeRule implements RuleInterface
 
         return [
             'matched' => false,
-            'weight' => self::WEIGHT,
+            'confidence' => self::CONFIDENCE,
             'metadata' => [],
         ];
     }

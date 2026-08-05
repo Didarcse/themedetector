@@ -14,6 +14,9 @@ use PHPUnit\Framework\TestCase;
 
 final class DetectionPipelineTest extends TestCase
 {
+    /**
+     * @param array<string, mixed> $metadata
+     */
     private function createResult(
         string $technology,
         int $confidence,

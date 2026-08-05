@@ -28,6 +28,9 @@ final class DrupalDetectorTest extends TestCase
         );
     }
 
+    /**
+     * @param iterable<RuleInterface> $rules
+     */
     private function createDetector(iterable $rules): DrupalDetector
     {
         return new DrupalDetector($rules, new ConfidenceCalculator());

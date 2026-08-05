@@ -28,6 +28,9 @@ final class GhostDetectorTest extends TestCase
         );
     }
 
+    /**
+     * @param iterable<RuleInterface> $rules
+     */
     private function createDetector(iterable $rules): GhostDetector
     {
         return new GhostDetector($rules, new ConfidenceCalculator());

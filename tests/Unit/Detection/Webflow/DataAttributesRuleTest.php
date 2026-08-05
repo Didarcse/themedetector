@@ -17,7 +17,7 @@ final class DataAttributesRuleTest extends TestCase
     }
 
     /**
-     * @return array{matched: bool, weight: int, metadata: array<string, string>}
+     * @return array{matched: bool, confidence: int, metadata: array<string, mixed>}
      */
     private function evaluate(string $html): array
     {
@@ -72,11 +72,11 @@ final class DataAttributesRuleTest extends TestCase
         self::assertFalse($result['matched']);
     }
 
-    public function test_returns_expected_weight(): void
+    public function test_returns_expected_confidence(): void
     {
         $result = $this->evaluate('<html data-wf-page="abc123"></html>');
 
-        self::assertSame(15, $result['weight']);
+        self::assertSame(15, $result['confidence']);
     }
 
     public function test_returns_attribute_metadata(): void

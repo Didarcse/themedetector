@@ -8,7 +8,8 @@ namespace App\Modules\Detection\Webflow;
  * Calculates the final confidence score for Webflow detection.
  *
  * Receives evaluation results from every Webflow rule, sums the
- * weights of matched rules, and clamps the result to 0–100.
+ * confidence contributions of matched rules, and clamps the result
+ * to 0–100.
  *
  * Contains no HTML parsing, no regex, and no HTTP logic — pure
  * score aggregation only.
@@ -20,7 +21,11 @@ final readonly class ConfidenceCalculator
     /**
      * Calculate the final confidence score from rule results.
      *
-     * @param list<array<string,mixed>> $ruleResults
+     * @param list<array{
+     *     matched: bool,
+     *     confidence: int,
+     *     metadata: array<string, mixed>
+     * }> $ruleResults
      *
      * @return int The calculated confidence score (0–100).
      */
@@ -33,7 +38,7 @@ final readonly class ConfidenceCalculator
                 continue;
             }
 
-            $score += $result['weight'];
+            $score += $result['confidence'];
         }
 
         if ($score < 0) {
