@@ -13,7 +13,8 @@ final class Dispatcher
 {
     public function __construct(
         private readonly Container $container,
-    ) {}
+    ) {
+    }
 
     public function dispatch(Route $route): Response
     {

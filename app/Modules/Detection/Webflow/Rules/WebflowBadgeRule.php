@@ -26,7 +26,7 @@ final readonly class WebflowBadgeRule implements RuleInterface
      */
     public function evaluate(string $html, string $url): array
     {
-        $dom = new DOMDocument;
+        $dom = new DOMDocument();
 
         $oldUseErrors = libxml_use_internal_errors(true);
 

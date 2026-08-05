@@ -13,7 +13,8 @@ final class View
 {
     public function __construct(
         private readonly string $viewsPath,
-    ) {}
+    ) {
+    }
 
     /**
      * @param array<string, mixed> $data

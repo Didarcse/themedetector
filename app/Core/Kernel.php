@@ -13,7 +13,8 @@ final class Kernel
         private readonly Router $router,
         private readonly Dispatcher $dispatcher,
         private readonly ExceptionHandler $exceptionHandler,
-    ) {}
+    ) {
+    }
 
     public function handle(Request $request): Response
     {

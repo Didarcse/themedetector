@@ -12,7 +12,9 @@ namespace App\Modules\Http;
  */
 final class CurlFactory
 {
-    private function __construct() {}
+    private function __construct()
+    {
+    }
 
     /**
      * Create and return a fully configured cURL handle.
