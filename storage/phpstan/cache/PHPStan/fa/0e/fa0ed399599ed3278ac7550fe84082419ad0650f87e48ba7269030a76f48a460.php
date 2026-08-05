@@ -2,7 +2,7 @@
 
 // odsl-C:\xampp\htdocs\themedetector\tests\Integration\Detection\WebsiteDetectorIntegrationTest.php-PHPStan\BetterReflection\Reflection\ReflectionClass-Tests\Integration\Detection\FakeHttpClient
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.70.0.3-8.2-471b58e93968cc26c38022e1e3b5df4a96ab15ebe96a2cf884dfecc0e787209f',
+   'variableKey' => 'v2-6.70.0.3-8.2-5693d5d22e6a3f729f612738146005e0ebe022791ad3eeef2cc9537b9bb432c5',
    'data' => 
   array (
     'locatedSource' => 
@@ -31,8 +31,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     'attributes' => 
     array (
     ),
-    'startLine' => 26,
-    'endLine' => 38,
+    'startLine' => 25,
+    'endLine' => 37,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => NULL,
@@ -75,8 +75,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 28,
-            'endLine' => 28,
+            'startLine' => 27,
+            'endLine' => 27,
             'startColumn' => 25,
             'endColumn' => 35,
             'parameterIndex' => 0,
@@ -97,8 +97,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 28,
-        'endLine' => 37,
+        'startLine' => 27,
+        'endLine' => 36,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,

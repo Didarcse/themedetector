@@ -37,7 +37,6 @@ use App\Modules\Detection\TYPO3\Rules\ScriptFingerprintRule as TYPO3ScriptFinger
 use App\Modules\Detection\TYPO3\TYPO3Detector;
 use App\Modules\Detection\WordPress\ConfidenceCalculator as WordPressConfidenceCalculator;
 use App\Modules\Detection\WordPress\Rules\GeneratorRule;
-use App\Modules\Detection\WordPress\Rules\PluginPathRule;
 use App\Modules\Detection\WordPress\Rules\ThemePathRule;
 use App\Modules\Detection\WordPress\WordPressDetector;
 use PHPUnit\Framework\TestCase;
@@ -68,7 +67,6 @@ final class DetectionManagerIntegrationTest extends TestCase
                     [
                         new GeneratorRule(),
                         new ThemePathRule(),
-                        new PluginPathRule(),
                     ],
                     new WordPressConfidenceCalculator(),
                 ),
@@ -118,7 +116,7 @@ final class DetectionManagerIntegrationTest extends TestCase
 
     public function test_detects_wordpress_fixture(): void
     {
-        $result = $this->createManager()->detect($this->createContext('wordpress'));
+        $result = $this->createManager()->detect($this->createContext('wordpress-basic'));
 
         self::assertTrue($result->isDetected());
         self::assertSame('WordPress', $result->technology());
@@ -127,7 +125,7 @@ final class DetectionManagerIntegrationTest extends TestCase
 
     public function test_detects_joomla_fixture(): void
     {
-        $result = $this->createManager()->detect($this->createContext('joomla'));
+        $result = $this->createManager()->detect($this->createContext('joomla-basic'));
 
         self::assertTrue($result->isDetected());
         self::assertSame('Joomla', $result->technology());
@@ -136,7 +134,7 @@ final class DetectionManagerIntegrationTest extends TestCase
 
     public function test_detects_drupal_fixture(): void
     {
-        $result = $this->createManager()->detect($this->createContext('drupal'));
+        $result = $this->createManager()->detect($this->createContext('drupal-basic'));
 
         self::assertTrue($result->isDetected());
         self::assertSame('Drupal', $result->technology());
@@ -145,7 +143,7 @@ final class DetectionManagerIntegrationTest extends TestCase
 
     public function test_detects_ghost_fixture(): void
     {
-        $result = $this->createManager()->detect($this->createContext('ghost'));
+        $result = $this->createManager()->detect($this->createContext('ghost-default'));
 
         self::assertTrue($result->isDetected());
         self::assertSame('Ghost', $result->technology());
@@ -154,7 +152,7 @@ final class DetectionManagerIntegrationTest extends TestCase
 
     public function test_detects_typo3_fixture(): void
     {
-        $result = $this->createManager()->detect($this->createContext('typo3'));
+        $result = $this->createManager()->detect($this->createContext('typo3-basic'));
 
         self::assertTrue($result->isDetected());
         self::assertSame('TYPO3', $result->technology());

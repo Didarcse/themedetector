@@ -2,7 +2,7 @@
 
 // odsl-C:\xampp\htdocs\themedetector\tests\Integration\Detection\WebsiteDetectorIntegrationTest.php-PHPStan\BetterReflection\Reflection\ReflectionClass-Tests\Integration\Detection\WebsiteDetectorIntegrationTest
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.70.0.3-8.2-471b58e93968cc26c38022e1e3b5df4a96ab15ebe96a2cf884dfecc0e787209f',
+   'variableKey' => 'v2-6.70.0.3-8.2-5693d5d22e6a3f729f612738146005e0ebe022791ad3eeef2cc9537b9bb432c5',
    'data' => 
   array (
     'locatedSource' => 
@@ -42,8 +42,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     'attributes' => 
     array (
     ),
-    'startLine' => 57,
-    'endLine' => 125,
+    'startLine' => 56,
+    'endLine' => 123,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => 'PHPUnit\\Framework\\TestCase',
@@ -67,20 +67,20 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
           'code' => '\'https://example.com\'',
           'attributes' => 
           array (
-            'startLine' => 59,
-            'endLine' => 59,
-            'startTokenPos' => 172,
-            'startFilePos' => 2026,
-            'endTokenPos' => 172,
-            'endFilePos' => 2046,
+            'startLine' => 58,
+            'endLine' => 58,
+            'startTokenPos' => 167,
+            'startFilePos' => 1968,
+            'endTokenPos' => 167,
+            'endFilePos' => 1988,
           ),
         ),
         'docComment' => NULL,
         'attributes' => 
         array (
         ),
-        'startLine' => 59,
-        'endLine' => 59,
+        'startLine' => 58,
+        'endLine' => 58,
         'startColumn' => 5,
         'endColumn' => 46,
       ),
@@ -110,8 +110,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 61,
-        'endLine' => 66,
+        'startLine' => 60,
+        'endLine' => 65,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -145,8 +145,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 68,
-        'endLine' => 73,
+        'startLine' => 67,
+        'endLine' => 72,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -180,8 +180,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 75,
-        'endLine' => 80,
+        'startLine' => 74,
+        'endLine' => 79,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -215,8 +215,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 82,
-        'endLine' => 87,
+        'startLine' => 81,
+        'endLine' => 86,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -253,8 +253,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
  * Boot the application, replace the HTTP client with the fake, and
  * run the complete Detection Engine workflow.
  */',
-        'startLine' => 93,
-        'endLine' => 98,
+        'startLine' => 92,
+        'endLine' => 97,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -288,8 +288,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 100,
-        'endLine' => 112,
+        'startLine' => 99,
+        'endLine' => 111,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -323,8 +323,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 114,
-        'endLine' => 124,
+        'startLine' => 113,
+        'endLine' => 122,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,

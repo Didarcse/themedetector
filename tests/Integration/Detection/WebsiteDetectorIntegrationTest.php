@@ -10,7 +10,6 @@ use App\Modules\Detection\DetectorRegistry;
 use App\Modules\Detection\WebsiteDetector;
 use App\Modules\Detection\WordPress\ConfidenceCalculator;
 use App\Modules\Detection\WordPress\Rules\GeneratorRule;
-use App\Modules\Detection\WordPress\Rules\PluginPathRule;
 use App\Modules\Detection\WordPress\Rules\ThemePathRule;
 use App\Modules\Detection\WordPress\WordPressDetector;
 use App\Modules\Http\HttpClientInterface;
@@ -117,7 +116,6 @@ final class WebsiteDetectorIntegrationTest extends TestCase
             [
                 new GeneratorRule(),
                 new ThemePathRule(),
-                new PluginPathRule(),
             ],
             new ConfidenceCalculator(),
         );
