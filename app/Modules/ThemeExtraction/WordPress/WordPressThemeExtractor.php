@@ -13,9 +13,11 @@ use App\Modules\ThemeExtraction\ThemeExtractionResult;
  *
  * WordPressThemeExtractor is the orchestration layer of the WordPress
  * theme extraction pipeline. It coordinates a fixed sequence of dedicated
- * collaborators and assembles the resulting ThemeExtractionResult from
- * their outputs. It is a thin facade: it performs no work itself other
- * than delegating each step and wiring the results together.
+ * collaborators — discovering the active theme stylesheet from the HTML,
+ * downloading it, parsing its header, and mapping the raw metadata — and
+ * assembles the resulting ThemeExtractionResult from their outputs. It is
+ * a thin facade: it performs no work itself other than delegating each
+ * step and wiring the results together.
  *
  * Pipeline:
  *
@@ -31,7 +33,7 @@ use App\Modules\ThemeExtraction\ThemeExtractionResult;
  *   ↓
  * WordPressStyleCssParser
  *   ↓
- * Raw Theme Metadata
+ * RawWordPressThemeMetadata
  *   ↓
  * WordPressThemeMetadataMapper
  *   ↓
@@ -41,7 +43,8 @@ use App\Modules\ThemeExtraction\ThemeExtractionResult;
  *
  * Responsibilities:
  *
- * - Delegate style.css URL locating to WordPressStyleCssLocator.
+ * - Delegate active theme stylesheet discovery to
+ *   WordPressStyleCssLocator.
  * - Delegate style.css downloading to WordPressStyleCssDownloader.
  * - Delegate raw metadata parsing to WordPressStyleCssParser.
  * - Delegate metadata normalization to WordPressThemeMetadataMapper.
@@ -75,8 +78,9 @@ final readonly class WordPressThemeExtractor implements ThemeExtractorInterface
     /**
      * Create a new WordPressThemeExtractor.
      *
-     * @param WordPressStyleCssLocator      $styleCssLocator      Locates the
-     *                                                            style.css URL from the
+     * @param WordPressStyleCssLocator      $styleCssLocator      Discovers the
+     *                                                            active theme style.css URL
+     *                                                            from the HTML inside the
      *                                                            detection context.
      * @param WordPressStyleCssDownloader   $styleCssDownloader   Downloads the style.css
      *                                                            contents from the located
@@ -102,7 +106,8 @@ final readonly class WordPressThemeExtractor implements ThemeExtractorInterface
      * Coordinates the dedicated collaborators in order and returns the
      * assembled result:
      *
-     * - Locate the style.css URL from the detection context.
+     * - Discover the active theme style.css URL from the detection
+     *   context HTML.
      * - Download the style.css contents from the located URL.
      * - Parse the raw theme metadata from the style.css contents.
      * - Map the raw metadata to a normalized ThemeMetadata.
@@ -119,7 +124,8 @@ final readonly class WordPressThemeExtractor implements ThemeExtractorInterface
      *
      * @return ThemeExtractionResult The extracted WordPress theme metadata
      *                               result, or a failed result when the
-     *                               style.css could not be resolved.
+     *                               style.css could not be located or
+     *                               downloaded.
      */
     public function extract(DetectionContext $context): ThemeExtractionResult
     {
