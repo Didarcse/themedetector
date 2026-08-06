@@ -9,9 +9,9 @@ use App\Core\ExceptionHandler;
 use App\Core\Kernel;
 use App\Core\Router;
 use App\Core\View;
+use App\Controllers\DetectionController;
 use App\Controllers\HomeController;
 use App\Controllers\LoadingController;
-use App\Controllers\ReportController;
 use App\Modules\Detection\Core\DetectionPipeline;
 use App\Modules\Detection\DetectionContextFactory;
 use App\Modules\Detection\DetectionEngine;
@@ -29,6 +29,7 @@ use App\Modules\ThemeExtraction\ThemeExtractionManager;
 use App\Modules\ThemeExtraction\ThemeExtractor;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistry;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistryFactory;
+use App\Services\DetectionService;
 use App\Services\WebsiteReportAnalyzer;
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';
@@ -128,9 +129,16 @@ $container->set(
 );
 
 $container->set(
-    ReportController::class,
-    static fn (Container $container): ReportController => new ReportController(
+    DetectionService::class,
+    static fn (Container $container): DetectionService => new DetectionService(
         $container->get(WebsiteReportAnalyzer::class),
+    ),
+);
+
+$container->set(
+    DetectionController::class,
+    static fn (Container $container): DetectionController => new DetectionController(
+        $container->get(DetectionService::class),
     ),
 );
 

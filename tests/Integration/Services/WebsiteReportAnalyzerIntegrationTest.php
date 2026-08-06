@@ -70,17 +70,23 @@ CSS;
         $report = $analyzer->analyze('example.com');
 
         $this->assertFalse($report->hasError());
-        $this->assertSame('https://example.com', $report->url());
-        $this->assertSame('https://example.com', $report->finalUrl());
-        $this->assertSame(200, $report->statusCode());
+        $this->assertSame('https://example.com', $report->websiteInformation()->url());
+        $this->assertSame('https://example.com', $report->websiteInformation()->finalUrl());
+        $this->assertSame(200, $report->websiteInformation()->statusCode());
         $this->assertGreaterThanOrEqual(0.0, $report->detectionTime());
 
         $this->assertTrue($report->hasDetection());
-        $detection = $report->detection();
+        $detection = $report->engine();
         $this->assertNotNull($detection);
         $this->assertTrue($detection->hasDetection());
         $this->assertSame('WordPress', $detection->primaryTechnology());
         $this->assertSame(55, $detection->highestConfidence());
+
+        $summary = $report->summary();
+        $this->assertSame('WordPress', $summary->cms());
+        $this->assertSame(55, $summary->cmsConfidence());
+        $this->assertSame('Twenty Twenty-Five', $summary->themeName());
+        $this->assertSame(['contact-form-7'], $summary->plugins());
 
         $theme = $report->theme();
         $this->assertNotNull($theme);
@@ -107,9 +113,10 @@ CSS;
         $report = $analyzer->analyze('not a url!!');
 
         $this->assertTrue($report->hasError());
-        $error = $report->error();
+        $error = $report->primaryError();
         $this->assertNotNull($error);
-        $this->assertStringContainsString('valid website URL', $error);
+        $this->assertSame('invalid_url', $error->code());
+        $this->assertStringContainsString('valid website URL', $error->message());
         $this->assertFalse($report->hasDetection());
     }
 
@@ -120,9 +127,10 @@ CSS;
         $report = $analyzer->analyze('   ');
 
         $this->assertTrue($report->hasError());
-        $error = $report->error();
+        $error = $report->primaryError();
         $this->assertNotNull($error);
-        $this->assertStringContainsString('valid website URL', $error);
+        $this->assertSame('invalid_url', $error->code());
+        $this->assertStringContainsString('valid website URL', $error->message());
     }
 
     public function test_analyze_returns_error_report_on_transport_failure(): void
@@ -132,9 +140,10 @@ CSS;
         $report = $analyzer->analyze('https://example.com');
 
         $this->assertTrue($report->hasError());
-        $error = $report->error();
+        $error = $report->primaryError();
         $this->assertNotNull($error);
-        $this->assertStringContainsString('could not be reached', $error);
+        $this->assertSame('transport_failure', $error->code());
+        $this->assertStringContainsString('could not be reached', $error->message());
         $this->assertFalse($report->hasDetection());
     }
 

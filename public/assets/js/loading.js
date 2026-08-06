@@ -3,7 +3,7 @@
  * Drives the loading screen between the homepage and the detection report.
  *
  * The progress bar and status messages are visual only and never fake a
- * backend result. The detection request is forwarded to the existing report
+ * backend result. The detection request is forwarded to the detection
  * endpoint; on success the returned report document replaces this page.
  */
 (function () {
@@ -160,7 +160,7 @@
             controller.abort();
         }, TIMEOUT_MS);
 
-        return fetch('/report', {
+        return fetch('/detect', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -202,7 +202,7 @@
         setProgress(100);
 
         try {
-            history.replaceState({}, '', '/report?url=' + encodeURIComponent(url));
+            history.replaceState({}, '', '/detect?url=' + encodeURIComponent(url));
         } catch (error) {
             /* Keep the current URL when replaceState is unavailable. */
         }

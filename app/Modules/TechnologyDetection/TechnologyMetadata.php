@@ -5,37 +5,38 @@ declare(strict_types=1);
 namespace App\Modules\TechnologyDetection;
 
 /**
- * Immutable value object representing normalized technology metadata.
+ * Immutable value object representing normalized website technology
+ * metadata.
  *
  * TechnologyMetadata is the canonical metadata model shared by every
- * Technology Detector implementation. It provides a CMS-agnostic
+ * Technology Detector implementation. It provides a platform-agnostic
  * representation of technology information so that consumers work with one
- * normalized structure regardless of the underlying technology.
+ * normalized structure regardless of the underlying technology category.
  *
  * Responsibilities:
  *
- * - Represent normalized technology metadata (name, category, version, and
- *   confidence score).
+ * - Represent normalized technology metadata (name, slug, category,
+ *   version, vendor, and related attributes).
  * - Act as the single shared metadata model for every Technology Detector.
  *
  * Design philosophy:
  *
  * - Immutable Value Object: once constructed, its state cannot be altered.
- * - Technology Agnostic: the model expresses technology-agnostic facts only
- *   and contains no platform-specific logic.
+ * - Technology Agnostic: the model expresses category-independent
+ *   technology facts only and contains no category-specific logic.
  * - Normalized Metadata Model: every detector populates the same shape.
  * - Single Responsibility Principle: it stores metadata only and performs
  *   no detection logic.
  * - Stateless, deterministic, and side-effect free.
  * - It performs no detection, no HTTP requests, and contains no parsing
- *   logic. It knows nothing about PHP, Laravel, React, Vue, Cloudflare,
- *   Nginx, or any other technology.
+ *   logic. It knows nothing about JavaScript libraries, analytics
+ *   platforms, CDNs, or any other technology.
  *
  * Future Compatibility:
  *
- * - The model supports PHP, JavaScript, CSS frameworks, CDNs, web servers,
- *   and future technologies without modification.
- * - Technology-specific values must be stored in extra() instead of changing
+ * - The model supports JavaScript Libraries, Analytics, CDN, and future
+ *   technology categories without modification.
+ * - Category-specific values must be stored in extra() instead of changing
  *   the public API, keeping the model backward compatible.
  */
 final readonly class TechnologyMetadata
@@ -43,19 +44,38 @@ final readonly class TechnologyMetadata
     /**
      * Create a technology metadata instance.
      *
-     * @param string               $name       The technology name.
-     * @param string               $category   The technology category (for
-     *                                         example framework, language,
-     *                                         cdn, or server).
-     * @param string|null          $version    The technology version.
-     * @param int                  $confidence The confidence score (0-100).
-     * @param array<string, mixed> $extra      Technology-specific metadata.
+     * @param string               $name             The technology name.
+     * @param string|null          $slug             The technology slug.
+     * @param string|null          $category         The technology category
+     *                                               (e.g. "JavaScript
+     *                                               Library", "Analytics",
+     *                                               "CDN").
+     * @param string|null          $version          The technology version.
+     * @param string|null          $vendor           The technology vendor
+     *                                               name.
+     * @param string|null          $vendorUrl        The technology vendor
+     *                                               URL.
+     * @param string|null          $description      The technology
+     *                                               description.
+     * @param string|null          $documentationUrl The technology
+     *                                               documentation URL.
+     * @param string|null          $license          The technology license
+     *                                               identifier.
+     * @param list<string>         $tags             The technology tags.
+     * @param array<string, mixed> $extra            Category-specific
+     *                                               metadata.
      */
     public function __construct(
         private string $name,
-        private string $category,
+        private ?string $slug = null,
+        private ?string $category = null,
         private ?string $version = null,
-        private int $confidence = 0,
+        private ?string $vendor = null,
+        private ?string $vendorUrl = null,
+        private ?string $description = null,
+        private ?string $documentationUrl = null,
+        private ?string $license = null,
+        private array $tags = [],
         private array $extra = [],
     ) {
     }
@@ -71,11 +91,21 @@ final readonly class TechnologyMetadata
     }
 
     /**
+     * Return the technology slug.
+     *
+     * @return string|null The technology slug, or null when unknown.
+     */
+    public function slug(): ?string
+    {
+        return $this->slug;
+    }
+
+    /**
      * Return the technology category.
      *
-     * @return string The technology category.
+     * @return string|null The technology category, or null when unknown.
      */
-    public function category(): string
+    public function category(): ?string
     {
         return $this->category;
     }
@@ -91,24 +121,76 @@ final readonly class TechnologyMetadata
     }
 
     /**
-     * Return the confidence score of the detection.
+     * Return the technology vendor name.
      *
-     * @return int The confidence score (0-100).
+     * @return string|null The technology vendor name, or null when unknown.
      */
-    public function confidence(): int
+    public function vendor(): ?string
     {
-        return $this->confidence;
+        return $this->vendor;
     }
 
     /**
-     * Return the technology-specific metadata.
+     * Return the technology vendor URL.
+     *
+     * @return string|null The technology vendor URL, or null when unknown.
+     */
+    public function vendorUrl(): ?string
+    {
+        return $this->vendorUrl;
+    }
+
+    /**
+     * Return the technology description.
+     *
+     * @return string|null The technology description, or null when unknown.
+     */
+    public function description(): ?string
+    {
+        return $this->description;
+    }
+
+    /**
+     * Return the technology documentation URL.
+     *
+     * @return string|null The technology documentation URL, or null when
+     *                     unknown.
+     */
+    public function documentationUrl(): ?string
+    {
+        return $this->documentationUrl;
+    }
+
+    /**
+     * Return the technology license identifier.
+     *
+     * @return string|null The technology license identifier, or null when
+     *                     unknown.
+     */
+    public function license(): ?string
+    {
+        return $this->license;
+    }
+
+    /**
+     * Return the technology tags.
+     *
+     * @return list<string> The technology tags.
+     */
+    public function tags(): array
+    {
+        return $this->tags;
+    }
+
+    /**
+     * Return the category-specific metadata.
      *
      * The extra payload is the extension point for technology facts that do
      * not fit the first-class TechnologyMetadata properties. It must only
-     * contain technology-specific metadata and must never duplicate any
+     * contain category-specific metadata and must never duplicate any
      * first-class property exposed on this value object.
      *
-     * @return array<string, mixed> The technology-specific metadata.
+     * @return array<string, mixed> The category-specific metadata.
      */
     public function extra(): array
     {

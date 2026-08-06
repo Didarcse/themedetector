@@ -19,7 +19,7 @@ $note = $note ?? '';
         <div
             class="progress"
             role="progressbar"
-            aria-valuenow="0"
+            aria-valuenow="<?= htmlspecialchars((string) $score, ENT_QUOTES, 'UTF-8') ?>"
             aria-valuemin="0"
             aria-valuemax="100"
             aria-label="<?= htmlspecialchars((string) $label, ENT_QUOTES, 'UTF-8') ?>"

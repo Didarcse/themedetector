@@ -263,3 +263,20 @@ body {
         padding-bottom: 4.5rem;
     }
 }
+
+/* Motion preferences */
+
+@media (prefers-reduced-motion: reduce) {
+    .btn,
+    .icon-card,
+    .plugin-card,
+    .site-footer a {
+        transition: none;
+    }
+
+    .icon-card:hover,
+    .plugin-card:hover {
+        transform: none;
+        box-shadow: var(--td-shadow-sm);
+    }
+}

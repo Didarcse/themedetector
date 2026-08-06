@@ -13,8 +13,8 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
 use App\Core\View;
+use App\Controllers\DetectionController;
 use App\Controllers\HomeController;
-use App\Controllers\ReportController;
 use App\Modules\Detection\Core\DetectionPipeline;
 use App\Modules\Detection\DetectionContextFactory;
 use App\Modules\Detection\DetectionEngine;
@@ -31,6 +31,7 @@ use App\Modules\ThemeExtraction\ThemeExtractionManager;
 use App\Modules\ThemeExtraction\ThemeExtractor;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistry;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistryFactory;
+use App\Services\DetectionService;
 use App\Services\WebsiteReportAnalyzer;
 use PHPUnit\Framework\Attributes\BackupGlobals;
 use PHPUnit\Framework\TestCase;
@@ -85,7 +86,7 @@ CSS;
         $kernel = $this->kernel(new PageFakeHttpClient(self::HOMEPAGE_HTML, self::STYLESHEET_CSS));
 
         $response = $kernel->handle(
-            $this->request('POST', '/report', post: ['url' => 'example.com']),
+            $this->request('POST', '/detect', post: ['url' => 'example.com']),
         );
 
         $this->assertSame(200, $response->status());
@@ -102,8 +103,6 @@ CSS;
         $this->assertStringContainsString('Theme Information', $response->content());
         $this->assertStringContainsString('Theme Metadata', $response->content());
         $this->assertStringContainsString('Detected Plugins', $response->content());
-        $this->assertStringContainsString('Detection Details', $response->content());
-        $this->assertStringContainsString('Performance Summary', $response->content());
         $this->assertStringContainsString('Detect Another Website', $response->content());
         $this->assertStringContainsString('Copy Report', $response->content());
     }
@@ -113,7 +112,7 @@ CSS;
         $kernel = $this->kernel(new PageFakeHttpClient(self::HOMEPAGE_HTML, self::STYLESHEET_CSS));
 
         $response = $kernel->handle(
-            $this->request('POST', '/report', post: ['url' => 'not a url!!']),
+            $this->request('POST', '/detect', post: ['url' => 'not a url!!']),
         );
 
         $this->assertSame(200, $response->status());
@@ -222,9 +221,16 @@ CSS;
         );
 
         $container->set(
-            ReportController::class,
-            static fn (Container $container): ReportController => new ReportController(
+            DetectionService::class,
+            static fn (Container $container): DetectionService => new DetectionService(
                 $container->get(WebsiteReportAnalyzer::class),
+            ),
+        );
+
+        $container->set(
+            DetectionController::class,
+            static fn (Container $container): DetectionController => new DetectionController(
+                $container->get(DetectionService::class),
             ),
         );
 

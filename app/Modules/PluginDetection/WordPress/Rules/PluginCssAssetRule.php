@@ -45,6 +45,8 @@ final readonly class PluginCssAssetRule
 
     private const PLUGIN_PATH_PATTERN = '/\/wp-content\/plugins\/([^\/?"\'\s>]+)/i';
 
+    private const VALID_SLUG_PATTERN = '/^[a-zA-Z0-9][a-zA-Z0-9_.\-]*$/';
+
     /**
      * Evaluate the HTML for WordPress plugin CSS asset references.
      *
@@ -81,7 +83,7 @@ final readonly class PluginCssAssetRule
             foreach ($paths[1] as $slug) {
                 $slug = trim($slug);
 
-                if ($slug === '') {
+                if ($slug === '' || preg_match(self::VALID_SLUG_PATTERN, $slug) !== 1) {
                     continue;
                 }
 

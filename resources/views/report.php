@@ -1,45 +1,40 @@
 <?php
-$url = $url ?? '';
+/** @var App\ViewModels\DetectionReportViewModel|null $report */
 $report = $report ?? null;
 
-$detection = null;
-$themeResult = null;
-$pluginResult = null;
-$themeMetadata = null;
-$primary = null;
+$url = $report?->submittedUrl() ?? '';
 
 $websiteItems = [];
 $cmsItems = [];
 $themeItems = [];
 $themeMetadataItems = [];
-$detailsItems = [];
-$performanceItems = [];
 $pluginNames = [];
 $extraPluginNames = [];
 $mainPlugin = null;
+$themeMetadata = null;
 $score = 0;
 $hasDetection = false;
-$primaryTechnology = '';
+$cms = '';
 $statusClass = 'secondary';
 $statusText = 'No CMS detected';
 $scoreNote = '';
 $reportText = '';
+$themeConfidence = 0;
 
 if ($report !== null && !$report->hasError()) {
-    $detection = $report->detection();
-    $themeResult = $report->theme();
-    $pluginResult = $report->plugin();
-    $themeMetadata = $themeResult?->isExtracted() === true ? $themeResult->theme() : null;
-    $primary = $detection?->primary();
-    $hasDetection = $detection?->hasDetection() ?? false;
-    $primaryTechnology = $detection?->primaryTechnology() ?? '';
-    $score = $detection?->highestConfidence() ?? 0;
-    $technologies = $detection?->technologies() ?? [];
-    $technologyCount = count($technologies);
+    $hasDetection = $report->hasDetection();
+    $cms = $report->cms();
+    $themeMetadata = $report->themeMetadata();
+    $themeConfidence = $report->themeConfidence();
+    $mainPlugin = $report->pluginMetadata();
+    $pluginNames = $report->plugins();
+    $score = $report->detectionConfidence();
+    $technologies = $report->technologies();
+    $technologyCount = $report->technologiesCount();
 
     if ($hasDetection) {
         $statusClass = 'success';
-        $statusText = $primaryTechnology . ' detected';
+        $statusText = $cms . ' detected';
     }
 
     $scoreNote = $technologyCount === 1
@@ -49,7 +44,7 @@ if ($report !== null && !$report->hasError()) {
     $websiteItems = [
         [
             'label' => 'Submitted URL',
-            'value' => $report->url() !== '' ? $report->url() : $url,
+            'value' => $url !== '' ? $url : $report->url(),
             'link' => $report->url() !== '' ? $report->url() : '',
         ],
         [
@@ -62,32 +57,36 @@ if ($report !== null && !$report->hasError()) {
             'value' => $report->statusCode() > 0 ? 'Response received' : 'Unknown',
             'badge' => $report->statusCode() > 0 ? (string) $report->statusCode() : '',
         ],
-        ['label' => 'Detection Time', 'value' => number_format($report->detectionTime(), 2) . ' seconds'],
+        ['label' => 'Detection Time', 'value' => number_format($report->executionTime(), 2) . ' seconds'],
     ];
 
     if ($hasDetection) {
         $cmsItems[] = [
             'label' => 'Platform',
-            'value' => $primaryTechnology,
+            'value' => $cms,
             'badge' => 'Primary',
         ];
-        $cmsItems[] = ['label' => 'Confidence', 'value' => $score . '%'];
+        $cmsItems[] = ['label' => 'Confidence', 'value' => $report->cmsConfidence() . '%'];
 
         foreach ($technologies as $technology) {
-            if ($technology === $primaryTechnology) {
+            if ($technology === $cms) {
                 continue;
             }
 
             $cmsItems[] = [
                 'label' => 'Detected',
                 'value' => $technology,
-                'badge' => ($detection->technology($technology)?->confidence() ?? 0) . '%',
+                'badge' => $report->confidenceForTechnology($technology) . '%',
             ];
         }
     }
 
     if ($themeMetadata !== null) {
-        $themeItems[] = ['label' => 'Name', 'value' => $themeMetadata->name()];
+        $themeItems[] = [
+            'label' => 'Name',
+            'value' => $themeMetadata->name(),
+            'badge' => $themeConfidence > 0 ? $themeConfidence . '%' : '',
+        ];
         $themeItems[] = ['label' => 'Version', 'value' => $themeMetadata->version() ?? 'Unknown'];
         $themeItems[] = [
             'label' => 'Author',
@@ -131,66 +130,21 @@ if ($report !== null && !$report->hasError()) {
         }
     }
 
-    if ($pluginResult?->isDetected() === true && $pluginResult->plugin() !== null) {
-        $mainPlugin = $pluginResult->plugin();
-        $pluginNames[$mainPlugin->name()] = $mainPlugin->name();
-    }
-
-    foreach (($primary?->plugins() ?? []) as $pluginName) {
-        $pluginNames[$pluginName] = $pluginName;
-    }
-
-    $pluginNames = array_values($pluginNames);
-
     foreach ($pluginNames as $pluginName) {
         if ($mainPlugin === null || $pluginName !== $mainPlugin->name()) {
             $extraPluginNames[] = $pluginName;
         }
     }
 
-    $detailsItems = [
-        [
-            'label' => 'Theme Detection',
-            'value' => $primaryTechnology !== '' ? $primaryTechnology : 'None',
-            'badge' => $primary?->theme() ?? '',
-        ],
-        [
-            'label' => 'Theme Extraction',
-            'value' => $themeMetadata !== null
-                ? trim($themeMetadata->name() . ' ' . ($themeMetadata->version() ?? ''))
-                : 'Not extracted',
-            'badge' => $themeMetadata !== null ? ($themeResult?->confidence() ?? 0) . '%' : '',
-        ],
-        [
-            'label' => 'Plugin Detection',
-            'value' => $mainPlugin !== null
-                ? $mainPlugin->name()
-                : ($pluginNames !== [] ? implode(', ', $pluginNames) : 'None detected'),
-            'badge' => $mainPlugin !== null ? ($pluginResult?->confidence() ?? 0) . '%' : '',
-        ],
-        ['label' => 'Execution Time', 'value' => number_format($report->detectionTime(), 3) . ' seconds'],
-    ];
-
-    $performanceItems = [
-        ['label' => 'Detection Time', 'value' => number_format($report->detectionTime(), 2) . ' seconds'],
-        [
-            'label' => 'HTTP Status',
-            'value' => $report->statusCode() > 0 ? 'Response received' : 'Unknown',
-            'badge' => $report->statusCode() > 0 ? (string) $report->statusCode() : '',
-        ],
-        ['label' => 'Technologies Detected', 'value' => (string) $technologyCount],
-        ['label' => 'Detection Status', 'value' => $hasDetection ? 'Complete' : 'No detection'],
-    ];
-
     $reportText = implode("\n", [
         'ThemeDetectorTool Report',
         'URL: ' . ($report->url() !== '' ? $report->url() : $url),
         'Final URL: ' . ($report->finalUrl() !== '' ? $report->finalUrl() : 'Unknown'),
         'HTTP Status: ' . ($report->statusCode() > 0 ? (string) $report->statusCode() : 'Unknown'),
-        'CMS: ' . ($hasDetection ? $primaryTechnology . ' (' . $score . '% confidence)' : 'Not detected'),
+        'CMS: ' . ($hasDetection ? $cms . ' (' . $report->cmsConfidence() . '% confidence)' : 'Not detected'),
         'Theme: ' . ($themeMetadata !== null ? $themeMetadata->name() : 'Not detected'),
         'Plugins: ' . ($pluginNames !== [] ? implode(', ', $pluginNames) : 'None detected'),
-        'Detection Time: ' . number_format($report->detectionTime(), 2) . ' seconds',
+        'Detection Time: ' . number_format($report->executionTime(), 2) . ' seconds',
     ]);
 }
 ?>
@@ -209,7 +163,7 @@ if ($report !== null && !$report->hasError()) {
 
         <?php if ($report === null): ?>
             <div class="alert alert-info shadow-sm" role="alert">
-                <h2 class="h5 alert-heading mb-0">Submit a website URL to generate a detection report.</h2>
+                <h1 class="h5 alert-heading mb-0">Submit a website URL to generate a detection report.</h1>
             </div>
         <?php elseif ($report->hasError()): ?>
             <div
@@ -218,14 +172,14 @@ if ($report !== null && !$report->hasError()) {
                 id="detection-failed"
                 data-detection-error="<?= htmlspecialchars((string) $report->error(), ENT_QUOTES, 'UTF-8') ?>"
             >
-                <h2 class="h5 alert-heading mb-2">Detection failed</h2>
+                <h1 class="h5 alert-heading mb-2">Detection failed</h1>
                 <p class="mb-0"><?= htmlspecialchars((string) $report->error(), ENT_QUOTES, 'UTF-8') ?></p>
             </div>
         <?php else: ?>
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
                 <div>
                     <h1 class="h3 fw-bold mb-1"><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></h1>
-                    <p class="text-secondary small mb-0"><?= htmlspecialchars($url, ENT_QUOTES, 'UTF-8') ?></p>
+                    <p class="text-secondary small text-break mb-0"><?= htmlspecialchars($url, ENT_QUOTES, 'UTF-8') ?></p>
                 </div>
                 <span class="badge rounded-pill text-bg-<?= htmlspecialchars($statusClass, ENT_QUOTES, 'UTF-8') ?> fs-6">
                     <?= htmlspecialchars($statusText, ENT_QUOTES, 'UTF-8') ?>
@@ -290,7 +244,7 @@ if ($report !== null && !$report->hasError()) {
                                                 'name' => $mainPlugin->name(),
                                                 'slug' => $mainPlugin->slug() ?? '',
                                                 'version' => $mainPlugin->version() ?? '',
-                                                'confidence' => $pluginResult?->confidence() ?? 0,
+                                                'confidence' => $report->pluginConfidence(),
                                                 'url' => $mainPlugin->pluginUrl() ?? '',
                                             ]) ?>
                                         </div>
@@ -310,15 +264,6 @@ if ($report !== null && !$report->hasError()) {
                             <?php endif; ?>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <div class="row g-4 mb-4">
-                <div class="col-lg-6">
-                    <?= view('partials.report-card', ['title' => 'Detection Details', 'items' => $detailsItems]) ?>
-                </div>
-                <div class="col-lg-6">
-                    <?= view('partials.report-card', ['title' => 'Performance Summary', 'items' => $performanceItems]) ?>
                 </div>
             </div>
 

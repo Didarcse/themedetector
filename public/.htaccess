@@ -1,0 +1,15 @@
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Serve existing physical files (assets, images, etc.) directly.
+    # Do not rewrite requests for real files or real directories.
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+
+    # Route every other request through the front controller.
+    RewriteRule ^ index.php [L]
+</IfModule>

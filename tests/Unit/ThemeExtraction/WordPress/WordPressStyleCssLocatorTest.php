@@ -322,4 +322,240 @@ final class WordPressStyleCssLocatorTest extends TestCase
         self::assertSame($first, $second);
         self::assertSame(self::THEME_URL, $first);
     }
+
+    /**
+     * Verify that the theme is discovered from the wp-theme-{slug} body
+     * class emitted by WordPress when no stylesheet link exists.
+     */
+    public function test_finds_theme_from_body_class_fingerprint(): void
+    {
+        $context = new DetectionContext(
+            originalUrl: 'https://example.com/',
+            finalUrl: 'https://example.com/',
+            html: "<!DOCTYPE html>\n"
+                . "<html>\n"
+                . "<head><title>Page</title></head>\n"
+                . "<body class=\"home page-template-default wp-theme-astra\">\n"
+                . "<div>Hello</div>\n"
+                . "</body>\n"
+                . "</html>",
+            statusCode: 200,
+        );
+
+        self::assertSame(
+            'https://example.com/wp-content/themes/astra/style.css',
+            $this->locator()->locate($context),
+        );
+    }
+
+    /**
+     * Verify that the child theme class yields the parent slug when no
+     * stylesheet link exists, mirroring the elementor.com fingerprint.
+     */
+    public function test_body_class_prefers_active_theme_over_child_theme(): void
+    {
+        $context = new DetectionContext(
+            originalUrl: 'https://elementor.com/',
+            finalUrl: 'https://elementor.com/',
+            html: "<!DOCTYPE html>\n"
+                . "<html>\n"
+                . "<head><title>Elementor</title></head>\n"
+                . "<body class=\"home wp-theme-hello-elementor wp-child-theme-hello-theme-child-master\">\n"
+                . "</body>\n"
+                . "</html>",
+            statusCode: 200,
+        );
+
+        self::assertSame(
+            'https://elementor.com/wp-content/themes/hello-elementor/style.css',
+            $this->locator()->locate($context),
+        );
+    }
+
+    /**
+     * Verify that the theme is discovered from theme directory image paths
+     * when no stylesheet link exists, mirroring the w3eden.com fingerprint.
+     */
+    public function test_finds_theme_from_theme_directory_asset_paths(): void
+    {
+        $context = new DetectionContext(
+            originalUrl: 'https://www.w3eden.com/',
+            finalUrl: 'https://www.w3eden.com/',
+            html: "<!DOCTYPE html>\n"
+                . "<html>\n"
+                . "<head><title>W3 Eden</title></head>\n"
+                . "<body class=\"home\">\n"
+                . "<img src=\"https://www.w3eden.com/wp-content/themes/w3eden-starter/assets/images/logo.png\">\n"
+                . "</body>\n"
+                . "</html>",
+            statusCode: 200,
+        );
+
+        self::assertSame(
+            'https://www.w3eden.com/wp-content/themes/w3eden-starter/style.css',
+            $this->locator()->locate($context),
+        );
+    }
+
+    /**
+     * Verify that lazy-loaded data-src and data-bg theme paths are treated
+     * as theme directory asset paths.
+     */
+    public function test_finds_theme_from_lazy_loaded_asset_paths(): void
+    {
+        $context = new DetectionContext(
+            originalUrl: 'https://example.com/',
+            finalUrl: 'https://example.com/',
+            html: "<!DOCTYPE html>\n"
+                . "<html>\n"
+                . "<head><title>Page</title></head>\n"
+                . "<body class=\"home\">\n"
+                . "<div data-bg=\"/wp-content/themes/twenty/assets/images/bg.jpg\"></div>\n"
+                . "</body>\n"
+                . "</html>",
+            statusCode: 200,
+        );
+
+        self::assertSame(
+            'https://example.com/wp-content/themes/twenty/style.css',
+            $this->locator()->locate($context),
+        );
+    }
+
+    /**
+     * Verify that a theme stylesheet link inside a theme subdirectory is
+     * treated as a theme CSS asset and reveals the theme directory name.
+     */
+    public function test_finds_theme_from_theme_css_asset_subdirectory(): void
+    {
+        $context = new DetectionContext(
+            originalUrl: 'https://example.com/',
+            finalUrl: 'https://example.com/',
+            html: "<!DOCTYPE html>\n"
+                . "<html>\n"
+                . "<head>\n"
+                . "<link rel=\"stylesheet\" href=\"https://example.com/wp-content/themes/astra/assets/css/main.css\">\n"
+                . "</head>\n"
+                . "<body class=\"home\"></body>\n"
+                . "</html>",
+            statusCode: 200,
+        );
+
+        self::assertSame(
+            'https://example.com/wp-content/themes/astra/style.css',
+            $this->locator()->locate($context),
+        );
+    }
+
+    /**
+     * Verify that a stylesheet named directly inside the theme directory
+     * root is not treated as a theme CSS asset.
+     */
+    public function test_ignores_stylesheet_directly_inside_theme_root(): void
+    {
+        $context = $this->context(
+            $this->document(
+                '<link rel="stylesheet" href="https://example.com/wp-content/themes/astra/custom.css">',
+            ),
+        );
+
+        self::assertNull($this->locator()->locate($context));
+    }
+
+    /**
+     * Verify that the theme is discovered from a theme.json reference, the
+     * marker of a block theme.
+     */
+    public function test_finds_theme_from_theme_json_reference(): void
+    {
+        $context = new DetectionContext(
+            originalUrl: 'https://example.com/',
+            finalUrl: 'https://example.com/',
+            html: "<!DOCTYPE html>\n"
+                . "<html>\n"
+                . "<head>\n"
+                . "<script src=\"/wp-content/themes/twentytwentyfive/assets/index.js\"></script>\n"
+                . "<link rel=\"preload\" href=\"/wp-content/themes/twentytwentyfive/theme.json\" as=\"fetch\">\n"
+                . "</head>\n"
+                . "<body class=\"home\"></body>\n"
+                . "</html>",
+            statusCode: 200,
+        );
+
+        self::assertSame(
+            'https://example.com/wp-content/themes/twentytwentyfive/style.css',
+            $this->locator()->locate($context),
+        );
+    }
+
+    /**
+     * Verify that a direct stylesheet link takes priority over the body
+     * class fingerprint.
+     */
+    public function test_direct_stylesheet_link_beats_body_class(): void
+    {
+        $context = new DetectionContext(
+            originalUrl: 'https://example.com/',
+            finalUrl: 'https://example.com/',
+            html: "<!DOCTYPE html>\n"
+                . "<html>\n"
+                . "<head>\n"
+                . "<link rel=\"stylesheet\" href=\"/wp-content/themes/astra/style.css\">\n"
+                . "</head>\n"
+                . "<body class=\"home wp-theme-twenty\"></body>\n"
+                . "</html>",
+            statusCode: 200,
+        );
+
+        self::assertSame(
+            'https://example.com/wp-content/themes/astra/style.css',
+            $this->locator()->locate($context),
+        );
+    }
+
+    /**
+     * Verify that a known commercial theme fingerprint identifies the theme
+     * when no other evidence exists.
+     */
+    public function test_finds_theme_from_commercial_fingerprint(): void
+    {
+        $context = new DetectionContext(
+            originalUrl: 'https://example.com/',
+            finalUrl: 'https://example.com/',
+            html: "<!DOCTYPE html>\n"
+                . "<html>\n"
+                . "<head><title>Divi</title></head>\n"
+                . "<body class=\"home et-divi et_pb_pagebuilder_layout\">\n"
+                . "</body>\n"
+                . "</html>",
+            statusCode: 200,
+        );
+
+        self::assertSame(
+            'https://example.com/wp-content/themes/divi/style.css',
+            $this->locator()->locate($context),
+        );
+    }
+
+    /**
+     * Verify that null is returned when the document contains no theme
+     * evidence at all.
+     */
+    public function test_returns_null_when_no_theme_evidence_exists(): void
+    {
+        $context = new DetectionContext(
+            originalUrl: 'https://example.com/',
+            finalUrl: 'https://example.com/',
+            html: "<!DOCTYPE html>\n"
+                . "<html>\n"
+                . "<head><title>Plain page</title></head>\n"
+                . "<body class=\"home\">\n"
+                . "<p>Nothing to see here.</p>\n"
+                . "</body>\n"
+                . "</html>",
+            statusCode: 200,
+        );
+
+        self::assertNull($this->locator()->locate($context));
+    }
 }

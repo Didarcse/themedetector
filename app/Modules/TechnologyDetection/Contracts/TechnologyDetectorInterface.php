@@ -10,10 +10,10 @@ use App\Modules\TechnologyDetection\TechnologyDetectionResult;
 /**
  * Contract for every Technology Detector implementation.
  *
- * A Technology Detector determines whether it supports the supplied detection
- * context and, if so, produces a normalized technology detection result. Every
- * detector returns the same normalized TechnologyDetectionResult shape
- * regardless of the underlying technology.
+ * A Technology Detector determines whether it supports the supplied
+ * detection context and, if so, produces a normalized technology detection
+ * result. Every detector returns the same normalized
+ * TechnologyDetectionResult shape regardless of the underlying platform.
  *
  * Responsibilities:
  *
@@ -29,16 +29,16 @@ use App\Modules\TechnologyDetection\TechnologyDetectionResult;
  * - Dependency Injection and Open/Closed Principle: new detectors are
  *   introduced by implementing this interface without modifying existing
  *   code.
- * - Single Responsibility Principle: detectors perform technology detection
- *   only. They never perform HTTP requests, never parse responses, and
- *   never apply detection rules.
+ * - Single Responsibility Principle: detectors perform technology
+ *   detection only. They never perform HTTP requests, never parse
+ *   responses, and never apply detection rules.
  * - Stateless, deterministic, and side-effect free.
  *
  * Future Compatibility:
  *
- * - Every future technology detector — PHP, Laravel, React, Vue, Angular,
- *   Bootstrap, Tailwind, jQuery, Cloudflare, Nginx, and future platforms —
- *   must implement this contract and produce a TechnologyDetectionResult.
+ * - Every future technology detector — JavaScript libraries, analytics
+ *   platforms, CDNs, and future technology categories — must implement
+ *   this contract and produce a TechnologyDetectionResult.
  *
  * The interface knows nothing about SEO, Security, Performance, or
  * Website Intelligence.

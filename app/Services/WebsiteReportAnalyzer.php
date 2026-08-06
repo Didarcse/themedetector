@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Domain\DetectionReport\DetectionError;
+use App\Domain\DetectionReport\DetectionReport;
+use App\Domain\DetectionReport\DetectionSummary;
+use App\Domain\DetectionReport\WebsiteInformation;
 use App\Modules\Detection\Core\DetectionPipeline;
 use App\Modules\Detection\DetectionContextFactory;
 use App\Modules\Http\HttpClientInterface;
@@ -25,8 +29,8 @@ use App\Modules\ThemeExtraction\ThemeExtractor;
  * - Plugin Detection Engine via the PluginDetectionManager.
  *
  * Every engine result and the total detection time are assembled into an
- * immutable WebsiteReport. Transport failures and invalid URLs never
- * escape: they are converted into an error report instead.
+ * immutable domain DetectionReport. Transport failures and invalid URLs
+ * never escape: they are converted into an error report instead.
  *
  * Responsibilities:
  *
@@ -35,7 +39,7 @@ use App\Modules\ThemeExtraction\ThemeExtractor;
  * - Create the immutable DetectionContext.
  * - Run the Detection, Theme Extraction, and Plugin Detection engines.
  * - Measure the total detection time.
- * - Assemble and return an immutable WebsiteReport.
+ * - Assemble and return an immutable domain DetectionReport.
  *
  * Design philosophy:
  *
@@ -79,22 +83,23 @@ final readonly class WebsiteReportAnalyzer
      *
      * The URL is normalized (a scheme is added when missing) and validated.
      * On success the three detection engines run in order and their results
-     * are assembled into a WebsiteReport together with the measured
-     * detection time and the analysed website's HTTP status code. Invalid
-     * URLs and transport failures produce an error report that always
-     * carries a user-facing message.
+     * are assembled into a domain DetectionReport together with the
+     * measured detection time and the analysed website's HTTP status code.
+     * Invalid URLs and transport failures produce an error report that
+     * always carries a user-facing message.
      *
      * @param string $url The website URL submitted by the user.
      *
-     * @return WebsiteReport The immutable detection report.
+     * @return DetectionReport The immutable detection report.
      */
-    public function analyze(string $url): WebsiteReport
+    public function analyze(string $url): DetectionReport
     {
         $url = $this->normalizeUrl($url);
 
         if ($url === null) {
             return $this->errorReport(
                 url: '',
+                code: 'invalid_url',
                 message: 'Please enter a valid website URL, for example https://example.com.',
             );
         }
@@ -109,18 +114,22 @@ final readonly class WebsiteReportAnalyzer
             $theme = $this->themeExtractor->extract($context);
             $plugin = $this->pluginManager->detect($context);
 
-            return new WebsiteReport(
-                url: $url,
-                finalUrl: $response->finalUrl(),
-                detection: $detection,
+            return new DetectionReport(
+                websiteInformation: new WebsiteInformation(
+                    url: $url,
+                    finalUrl: $response->finalUrl(),
+                    statusCode: $response->statusCode(),
+                ),
+                engine: $detection,
                 theme: $theme,
                 plugin: $plugin,
+                summary: DetectionSummary::from($detection, $theme, $plugin),
                 detectionTime: microtime(true) - $startedAt,
-                statusCode: $response->statusCode(),
             );
         } catch (HttpException) {
             return $this->errorReport(
                 url: $url,
+                code: 'transport_failure',
                 message: 'The website could not be reached. Please check the URL and try again.',
             );
         }
@@ -130,21 +139,26 @@ final readonly class WebsiteReportAnalyzer
      * Build an error report for the given message.
      *
      * @param string $url     The normalized URL, empty when invalid.
+     * @param string $code    The stable machine-readable error code.
      * @param string $message The user-facing error message.
      *
-     * @return WebsiteReport The immutable error report.
+     * @return DetectionReport The immutable error report.
      */
-    private function errorReport(string $url, string $message): WebsiteReport
+    private function errorReport(string $url, string $code, string $message): DetectionReport
     {
-        return new WebsiteReport(
-            url: $url,
-            finalUrl: '',
-            detection: null,
-            theme: null,
-            plugin: null,
-            detectionTime: 0.0,
-            statusCode: 0,
-            error: $message,
+        return new DetectionReport(
+            websiteInformation: new WebsiteInformation(
+                url: $url,
+                finalUrl: '',
+                statusCode: 0,
+            ),
+            errors: [
+                new DetectionError(
+                    code: $code,
+                    message: $message,
+                    source: 'WebsiteReportAnalyzer',
+                ),
+            ],
         );
     }
 

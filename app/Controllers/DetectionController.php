@@ -5,36 +5,34 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Request;
-use App\Services\WebsiteReport;
-use App\Services\WebsiteReportAnalyzer;
+use App\Services\DetectionService;
 
 /**
- * Runs the Detection Report workflow and renders the report page.
+ * Accepts detection submissions and renders the Detection Report page.
  *
- * ReportController is the POST endpoint of the Detection Report MVP. It
- * reads the submitted URL from the request, delegates the complete
- * analysis to the WebsiteReportAnalyzer, and renders the report view
- * with the resulting WebsiteReport.
+ * DetectionController is the POST endpoint of the Detection Report
+ * integration. It reads the submitted URL from the request, delegates the
+ * complete analysis to the DetectionService, and renders the report view
+ * with the resulting DetectionReportViewModel.
  *
  * The report view always renders — including for invalid URLs and
- * unreachable websites — because the WebsiteReport carries a user-facing
+ * unreachable websites — because the view model carries a user-facing
  * error message for those cases. This keeps the workflow free of redirects
  * and session state while remaining accessible.
  *
  * Design philosophy:
  *
- * - Orchestrator: it reads the input, delegates to the analyzer, and
+ * - Orchestrator: it reads the input, delegates to the service, and
  *   renders the result. It contains no detection or business logic.
- * - Dependency Injection: the analyzer is provided through the
- *   constructor.
+ * - Dependency Injection: the service is provided through the constructor.
  * - Single Responsibility Principle: accepting the URL submission and
  *   rendering the report is its only concern.
  * - Stateless: the controller holds no request or session state.
  */
-final class ReportController
+final class DetectionController
 {
     public function __construct(
-        private WebsiteReportAnalyzer $analyzer,
+        private DetectionService $service,
     ) {
     }
 
@@ -42,10 +40,9 @@ final class ReportController
     {
         $url = $this->urlFromRequest();
 
-        $report = $this->analyzer->analyze($url);
+        $report = $this->service->detect($url);
 
         return view('report', [
-            'url' => $url,
             'report' => $report,
             'pageTitle' => 'Detection Report',
             'pageDescription' => $url !== '' ? 'Detection report for ' . $url . '.' : 'Website detection report.',
@@ -69,11 +66,11 @@ final class ReportController
         if ($container->has(Request::class)) {
             $url = $container->get(Request::class)->input('url', '');
 
-            return is_string($url) ? $url : '';
+            return is_string($url) ? trim($url) : '';
         }
 
         $url = Request::fromGlobals()->input('url', '');
 
-        return is_string($url) ? $url : '';
+        return is_string($url) ? trim($url) : '';
     }
 }
