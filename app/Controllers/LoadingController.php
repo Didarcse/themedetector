@@ -33,7 +33,11 @@ final class LoadingController
         return view('loading', [
             'url' => $url,
             'invalid' => !$this->isValidUrl($url),
-        ]);
+            'pageTitle' => 'Analyzing Website',
+            'pageDescription' => 'Detecting the CMS, theme, and plugins behind '
+                . ($url !== '' ? $url : 'your website') . '.',
+            'activeNav' => 'home',
+        ], 'layouts.app');
     }
 
     /**

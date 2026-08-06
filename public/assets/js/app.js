@@ -1,17 +1,47 @@
 /*!
  * ThemeDetectorTool v2 - Application scripts
  * Vanilla JavaScript enhancements layered on top of Bootstrap 5.
+ * No dependencies beyond the Bootstrap bundle loaded first.
  */
 (function () {
     'use strict';
 
+    var hooks = {
+        start: [],
+        complete: [],
+    };
+
     function onReady(callback) {
-        if (document.readyState !== 'loading') {
-            callback();
-        } else {
+        if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', callback);
+        } else {
+            callback();
         }
     }
+
+    /* Navbar support: close the collapsed menu after activating a link. */
+
+    function initNavbar() {
+        var nav = document.getElementById('main-nav');
+
+        if (!nav || typeof bootstrap === 'undefined') {
+            return;
+        }
+
+        var links = nav.querySelectorAll('.nav-link, .btn');
+        Array.prototype.forEach.call(links, function (link) {
+            link.addEventListener('click', function () {
+                if (!nav.classList.contains('show')) {
+                    return;
+                }
+
+                var collapse = bootstrap.Collapse.getOrCreateInstance(nav);
+                collapse.hide();
+            });
+        });
+    }
+
+    /* Progress bars */
 
     function setProgressBars() {
         var bars = document.querySelectorAll('.progress-bar[data-progress]');
@@ -23,6 +53,8 @@
             }
         });
     }
+
+    /* Copy-to-clipboard buttons */
 
     function copyText(text) {
         if (navigator.clipboard && window.isSecureContext) {
@@ -85,26 +117,7 @@
         });
     }
 
-    function bindUrlValidation() {
-        var forms = document.querySelectorAll('form[data-validate-url]');
-        Array.prototype.forEach.call(forms, function (form) {
-            var input = form.querySelector('[name="url"]');
-            if (!input) {
-                return;
-            }
-
-            form.addEventListener('submit', function (event) {
-                if (!isValidUrl(input.value)) {
-                    event.preventDefault();
-                    form.classList.add('was-validated');
-                    input.classList.add('is-invalid');
-                } else {
-                    form.classList.remove('was-validated');
-                    input.classList.remove('is-invalid');
-                }
-            });
-        });
-    }
+    /* URL form validation */
 
     function isValidUrl(value) {
         var trimmed = (value || '').trim();
@@ -129,9 +142,48 @@
         }
     }
 
+    function bindUrlValidation() {
+        var forms = document.querySelectorAll('form[data-validate-url]');
+        Array.prototype.forEach.call(forms, function (form) {
+            var input = form.querySelector('[name="url"]');
+            if (!input) {
+                return;
+            }
+
+            form.addEventListener('submit', function (event) {
+                if (!isValidUrl(input.value)) {
+                    event.preventDefault();
+                    form.classList.add('was-validated');
+                    input.classList.add('is-invalid');
+                } else {
+                    form.classList.remove('was-validated');
+                    input.classList.remove('is-invalid');
+                }
+            });
+        });
+    }
+
+    /* Future detector hooks */
+
+    function onDetectorStart(callback) {
+        hooks.start.push(callback);
+    }
+
+    function onDetectorComplete(callback) {
+        hooks.complete.push(callback);
+    }
+
+    window.ThemeDetectorTool = {
+        onDetectorStart: onDetectorStart,
+        onDetectorComplete: onDetectorComplete,
+    };
+
     onReady(function () {
+        initNavbar();
         setProgressBars();
         bindCopyButtons();
         bindUrlValidation();
+
+        document.dispatchEvent(new CustomEvent('td:ready'));
     });
 })();

@@ -2,10 +2,6 @@
 $url = $url ?? '';
 $invalid = (bool) ($invalid ?? false);
 
-$pageTitle = 'Analyzing Website';
-$pageDescription = 'Detecting the CMS, theme, and plugins behind '
-    . ($url !== '' ? $url : 'your website') . '.';
-
 $steps = [
     'Preparing detection context...',
     'Detecting CMS...',
@@ -15,7 +11,6 @@ $steps = [
     'Generating report...',
 ];
 ?>
-<?= view('partials.header', ['pageTitle' => $pageTitle, 'pageDescription' => $pageDescription, 'activeNav' => 'home']) ?>
 <section class="py-5">
     <div class="container">
         <div class="row justify-content-center">
@@ -70,4 +65,3 @@ $steps = [
     </div>
 </section>
 <script src="/assets/js/loading.js" defer></script>
-<?= view('partials.footer') ?>

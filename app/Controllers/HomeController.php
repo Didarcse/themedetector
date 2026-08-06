@@ -22,6 +22,12 @@ final class HomeController
 {
     public function __invoke(): string
     {
-        return view('home');
+        return view('home', [
+            'pageTitle' => "Detect Any Website's Theme & Plugins Instantly",
+            'pageDescription' => 'Enter a website URL to reveal its CMS, theme, theme version, author, and active '
+                . 'plugins. Free website technology detection for WordPress, Shopify, Webflow, Wix, Ghost, '
+                . 'Joomla, Drupal, TYPO3, and Squarespace.',
+            'activeNav' => 'home',
+        ], 'layouts.app');
     }
 }

@@ -47,7 +47,10 @@ final class ReportController
         return view('report', [
             'url' => $url,
             'report' => $report,
-        ]);
+            'pageTitle' => 'Detection Report',
+            'pageDescription' => $url !== '' ? 'Detection report for ' . $url . '.' : 'Website detection report.',
+            'activeNav' => 'home',
+        ], 'layouts.app');
     }
 
     /**

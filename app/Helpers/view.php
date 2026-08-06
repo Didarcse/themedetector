@@ -7,7 +7,7 @@ use App\Core\View;
 /**
  * @param array<string, mixed> $data
  */
-function view(string $view, array $data = []): string
+function view(string $view, array $data = [], ?string $layout = null): string
 {
-    return app()->make(View::class)->render($view, $data);
+    return app()->make(View::class)->render($view, $data, $layout);
 }

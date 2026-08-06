@@ -2,9 +2,6 @@
 $url = $url ?? '';
 $report = $report ?? null;
 
-$pageTitle = 'Detection Report';
-$pageDescription = $url !== '' ? 'Detection report for ' . $url . '.' : 'Website detection report.';
-
 $detection = null;
 $themeResult = null;
 $pluginResult = null;
@@ -197,7 +194,6 @@ if ($report !== null && !$report->hasError()) {
     ]);
 }
 ?>
-<?= view('partials.header', ['pageTitle' => $pageTitle, 'pageDescription' => $pageDescription, 'activeNav' => 'home']) ?>
 <section class="py-4">
     <div class="container">
         <div class="row justify-content-center mb-4">
@@ -330,4 +326,3 @@ if ($report !== null && !$report->hasError()) {
         <?php endif; ?>
     </div>
 </section>
-<?= view('partials.footer') ?>

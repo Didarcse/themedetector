@@ -1,7 +1,11 @@
 <?php
 
-$pageTitle = "Detect Any Website's Theme & Plugins in Seconds";
-$pageDescription = 'Enter a website URL to reveal its CMS, theme, theme version, author, and active plugins. Free website technology detection for WordPress, Shopify, Webflow, Wix, Ghost, Joomla, Drupal, TYPO3, and Squarespace.';
+$trustPoints = [
+    ['icon' => 'bi-lightning-charge-fill', 'title' => 'Fast', 'description' => 'Full technology reports in seconds.'],
+    ['icon' => 'bi-bullseye', 'title' => 'Accurate', 'description' => 'Multi-signal detection with confidence scores.'],
+    ['icon' => 'bi-shield-lock', 'title' => 'Privacy Friendly', 'description' => 'No account, no tracking, no stored results.'],
+    ['icon' => 'bi-boxes', 'title' => 'Open Architecture', 'description' => 'A modular engine ready for your own tooling.'],
+];
 
 $platforms = [
     ['icon' => 'bi-wordpress', 'title' => 'WordPress', 'description' => "The world's most popular CMS"],
@@ -9,25 +13,26 @@ $platforms = [
     ['icon' => 'bi-bezier2', 'title' => 'Webflow', 'description' => 'Visual website builder and hosting'],
     ['icon' => 'bi-collection', 'title' => 'Wix', 'description' => 'Drag-and-drop website builder'],
     ['icon' => 'bi-ghost', 'title' => 'Ghost', 'description' => 'Modern publishing platform'],
-    ['icon' => 'bi-puzzle', 'title' => 'Joomla', 'description' => 'Open-source content management system'],
     ['icon' => 'bi-droplet', 'title' => 'Drupal', 'description' => 'Flexible enterprise CMS'],
+    ['icon' => 'bi-puzzle', 'title' => 'Joomla', 'description' => 'Open-source content management system'],
     ['icon' => 'bi-layers', 'title' => 'TYPO3', 'description' => 'Enterprise-grade content management'],
     ['icon' => 'bi-layout-text-window', 'title' => 'Squarespace', 'description' => 'All-in-one website platform'],
+    ['icon' => 'bi-gear', 'title' => 'Technology Detection', 'description' => 'Deeper stack and technology detection for every platform.', 'badge' => 'Coming Soon'],
 ];
 
 $features = [
     ['icon' => 'bi-palette', 'title' => 'Theme Detection', 'description' => 'Identify the CMS or platform powering any website with a single request.'],
-    ['icon' => 'bi-plug', 'title' => 'Plugin Detection', 'description' => 'Discover the active plugins and extensions running behind a site.'],
     ['icon' => 'bi-file-earmark-code', 'title' => 'Theme Extraction', 'description' => 'Extract the theme name, version, and author from the active stylesheet.'],
+    ['icon' => 'bi-plug', 'title' => 'Plugin Detection', 'description' => 'Discover the active plugins and extensions running behind a site.'],
+    ['icon' => 'bi-code-slash', 'title' => 'Developer Friendly', 'description' => 'Clean, documented output designed for developers and automated workflows.'],
     ['icon' => 'bi-lightning-charge', 'title' => 'Fast Detection', 'description' => 'Receive a structured report in seconds, not minutes.'],
-    ['icon' => 'bi-shield-lock', 'title' => 'Privacy Friendly', 'description' => 'Only the public URL you submit is analyzed. No account, no tracking.'],
-    ['icon' => 'bi-code-slash', 'title' => 'Developer API', 'description' => 'Automate theme and plugin detection in your own tools with a clean HTTP API.'],
+    ['icon' => 'bi-boxes', 'title' => 'REST API', 'description' => 'Automate theme and plugin detection in your own tools.', 'badge' => 'Coming Soon'],
 ];
 
 $steps = [
-    ['icon' => 'bi-link-45deg', 'title' => 'Enter URL', 'description' => 'Paste any website address into the search box.'],
-    ['icon' => 'bi-gear-wide-connected', 'title' => 'Engine Detects', 'description' => 'Our engines inspect the CMS, theme, and plugins behind the site.'],
-    ['icon' => 'bi-clipboard-data', 'title' => 'View Report', 'description' => 'Read a clear report with confidence scores and detection time.'],
+    ['icon' => 'bi-link-45deg', 'title' => 'Enter Website URL', 'description' => 'Paste any website address into the search box.'],
+    ['icon' => 'bi-gear-wide-connected', 'title' => 'Detection Engine Analyzes Website', 'description' => 'Our engine inspects the CMS, theme, and plugins behind the site.'],
+    ['icon' => 'bi-clipboard-data', 'title' => 'Receive Professional Report', 'description' => 'Get a clear report with confidence scores and detection time.'],
 ];
 
 $faqs = [
@@ -57,7 +62,7 @@ $previewWebsiteItems = [
     ['label' => 'Submitted URL', 'value' => 'https://demo.example.com'],
     ['label' => 'Final URL', 'value' => 'https://demo.example.com/'],
     ['label' => 'HTTP Status', 'value' => 'Response received', 'badge' => '200'],
-    ['label' => 'Detection Time', 'value' => '1.24 seconds'],
+    ['label' => 'Execution Time', 'value' => '1.24 seconds'],
 ];
 
 $previewCmsItems = [
@@ -83,8 +88,6 @@ $previewConfidenceItems = [
     ['label' => 'Plugin detection', 'value' => '87%'],
 ];
 ?>
-<?= view('partials.header', ['pageTitle' => $pageTitle, 'pageDescription' => $pageDescription, 'activeNav' => 'home']) ?>
-
 <section class="hero text-white" id="detect">
     <div class="container py-5">
         <div class="row justify-content-center">
@@ -94,22 +97,39 @@ $previewConfidenceItems = [
                     Free website intelligence — no sign-up
                 </span>
                 <h1 class="display-title display-5 fw-bold mb-3"><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></h1>
-                <p class="lead text-white-50 mx-auto mb-4">Reveal the CMS, theme, theme version, author, and active plugins behind any website.</p>
-                <div class="d-flex flex-wrap justify-content-center gap-3 mb-4">
-                    <a href="#detect" class="btn btn-primary btn-lg px-4">Detect Website</a>
-                    <a href="#report-preview" class="btn btn-outline-light btn-lg px-4">View Demo</a>
-                </div>
+                <p class="lead text-white-50 mx-auto mb-4">ThemeDetectorTool helps developers identify website themes, plugins, and technologies quickly and accurately.</p>
                 <?= view('partials.search-form', [
                     'placeholder' => 'https://example.com',
-                    'buttonLabel' => 'Detect',
+                    'buttonLabel' => 'Detect Website',
                     'help' => '',
                 ]) ?>
+                <div class="d-flex flex-wrap justify-content-center gap-3 mt-4">
+                    <a href="#report-preview" class="btn btn-outline-light btn-lg px-4">View Sample Report</a>
+                </div>
                 <p class="small text-white-50 mt-3 mb-0">
                     <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
                     Free · No sign-up · 9+ platforms supported
                 </p>
             </div>
         </div>
+    </div>
+</section>
+
+<section class="py-4" id="trust" aria-label="Why trust ThemeDetectorTool">
+    <div class="container">
+        <ul class="row g-4 list-unstyled mb-0">
+            <?php foreach ($trustPoints as $point): ?>
+                <li class="col-6 col-lg-3">
+                    <div class="d-flex align-items-center gap-3 h-100">
+                        <span class="icon-tile" aria-hidden="true"><i class="bi <?= htmlspecialchars($point['icon'], ENT_QUOTES, 'UTF-8') ?>"></i></span>
+                        <div>
+                            <h3 class="h6 fw-bold mb-0"><?= htmlspecialchars($point['title'], ENT_QUOTES, 'UTF-8') ?></h3>
+                            <p class="small text-secondary mb-0"><?= htmlspecialchars($point['description'], ENT_QUOTES, 'UTF-8') ?></p>
+                        </div>
+                    </div>
+                </li>
+            <?php endforeach; ?>
+        </ul>
     </div>
 </section>
 
@@ -179,7 +199,7 @@ $previewConfidenceItems = [
 <section class="py-5" id="report-preview">
     <div class="container">
         <?= view('partials.section-heading', [
-            'eyebrow' => 'Live Example',
+            'eyebrow' => 'Detection Preview',
             'title' => 'Example Detection Report',
             'subtitle' => 'A preview of the structured report you get for any website.',
         ]) ?>
@@ -193,7 +213,7 @@ $previewConfidenceItems = [
         </div>
         <div class="row g-4">
             <div class="col-lg-6">
-                <?= view('partials.report-card', ['title' => 'Website Information', 'items' => $previewWebsiteItems]) ?>
+                <?= view('partials.report-card', ['title' => 'Website Summary', 'items' => $previewWebsiteItems]) ?>
             </div>
             <div class="col-lg-6">
                 <?= view('partials.report-card', ['title' => 'CMS', 'items' => $previewCmsItems]) ?>
@@ -236,11 +256,10 @@ $previewConfidenceItems = [
 </section>
 
 <?= view('partials.cta-banner', [
-    'title' => 'Start Detecting Now',
+    'title' => 'Ready to Detect Your Next Website?',
     'description' => 'Enter a website URL and get a full technology report in seconds. Free, private, and no account required.',
-    'buttonLabel' => 'Detect Website',
+    'buttonLabel' => 'Start Detection',
     'buttonHref' => '#detect',
 ]) ?>
 
 <?= view('partials.faq-schema', ['faqs' => $faqs]) ?>
-<?= view('partials.footer') ?>

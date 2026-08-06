@@ -74,7 +74,7 @@ CSS;
         );
 
         $this->assertSame(200, $response->status());
-        $this->assertStringContainsString('Theme &amp; Plugins in Seconds', $response->content());
+        $this->assertStringContainsString('Theme &amp; Plugins Instantly', $response->content());
         $this->assertStringContainsString('Website URL', $response->content());
         $this->assertStringContainsString('<form', $response->content());
         $this->assertStringContainsString('method="post"', $response->content());
