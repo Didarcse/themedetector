@@ -18,14 +18,18 @@ namespace App\Modules\PluginDetection\WordPress\Rules;
  *
  * - Scan the HTML for linked CSS assets (stylesheet link tags).
  * - Extract the plugin slugs referenced by their href attributes.
- * - Return the unique slugs, sorted alphabetically.
+ * - Discard references that cannot be plugin slugs: malformed names,
+ *   wildcard patterns, and well-known non-plugin artifact directories.
+ * - Return the unique, valid slugs, sorted alphabetically.
  *
  * Design philosophy:
  *
  * - Single Responsibility Principle: evaluating the HTML for WordPress
  *   plugin CSS asset references is the only concern. It performs no HTTP
  *   requests, no metadata mapping, no confidence aggregation beyond the
- *   rule's own score, and no business rules.
+ *   rule's own score, and no workflow orchestration. The only decision
+ *   it applies is slug validity: references that are not valid plugin
+ *   slugs are discarded.
  * - Stateless, deterministic, and side-effect free: given the same HTML
  *   and URL, it always returns the same result.
  * - Platform-specific implementation: this rule knows it targets
@@ -46,6 +50,25 @@ final readonly class PluginCssAssetRule
     private const PLUGIN_PATH_PATTERN = '/\/wp-content\/plugins\/([^\/?"\'\s>]+)/i';
 
     private const VALID_SLUG_PATTERN = '/^[a-zA-Z0-9][a-zA-Z0-9_.\-]*$/';
+
+    /**
+     * Well-known directories that appear directly under
+     * /wp-content/plugins/ in asset URLs but are never plugin slugs.
+     *
+     * Combined and minified asset URLs routinely reference build,
+     * dependency, and asset directories (for example
+     * /wp-content/plugins/dist/...) that are not plugins; discarding
+     * them prevents false-positive plugin detections.
+     *
+     * @var list<string>
+     */
+    private const NON_PLUGIN_DIRECTORIES = [
+        'assets',
+        'build',
+        'dist',
+        'node_modules',
+        'vendor',
+    ];
 
     /**
      * Evaluate the HTML for WordPress plugin CSS asset references.
@@ -83,7 +106,7 @@ final readonly class PluginCssAssetRule
             foreach ($paths[1] as $slug) {
                 $slug = trim($slug);
 
-                if ($slug === '' || preg_match(self::VALID_SLUG_PATTERN, $slug) !== 1) {
+                if ($slug === '' || !$this->isPluginSlug($slug)) {
                     continue;
                 }
 
@@ -105,6 +128,22 @@ final readonly class PluginCssAssetRule
                 'plugins' => $plugins,
             ],
         ];
+    }
+
+    /**
+     * Determine whether a raw path capture is a usable plugin slug.
+     *
+     * A usable slug is non-empty, matches the valid slug shape, and is
+     * not a well-known non-plugin artifact directory.
+     *
+     * @param string $slug The trimmed raw path capture.
+     *
+     * @return bool True when the capture is a usable plugin slug.
+     */
+    private function isPluginSlug(string $slug): bool
+    {
+        return preg_match(self::VALID_SLUG_PATTERN, $slug) === 1
+            && !in_array($slug, self::NON_PLUGIN_DIRECTORIES, true);
     }
 
     /**

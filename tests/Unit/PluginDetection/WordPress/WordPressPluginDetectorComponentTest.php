@@ -316,6 +316,57 @@ final class WordPressPluginDetectorComponentTest extends TestCase
     }
 
     /**
+     * Verify that build-artifact references never become the primary
+     * plugin.
+     *
+     * Combined asset URLs referencing non-plugin directories such as
+     * /wp-content/plugins/dist/ are discarded by the rule, so the
+     * alphabetically first real plugin slug becomes the primary. This is
+     * a regression test for the woocommerce.com false positive, where
+     * the "dist" artifact directory previously won primary selection
+     * over the real woocommerce plugin.
+     */
+    public function test_detect_never_selects_build_artifact_as_primary_plugin(): void
+    {
+        $result = $this->detector()->detect($this->contextWithPlugins(
+            'woocommerce',
+            'dist',
+            'woocommerce-payments',
+        ));
+
+        $plugin = $result->plugin();
+        self::assertNotNull($plugin);
+        self::assertSame('woocommerce', $plugin->slug());
+        self::assertSame(
+            ['plugins' => ['woocommerce', 'woocommerce-payments']],
+            $plugin->extra(),
+        );
+    }
+
+    /**
+     * Verify that a wildcard plugin reference never becomes a plugin.
+     *
+     * A page whose only /wp-content/plugins/ reference is the
+     * "/wp-content/plugins/*" URL-match wildcard is not detected as
+     * carrying a plugin, mirroring the w3eden.com configuration.
+     */
+    public function test_detect_ignores_wildcard_plugin_reference(): void
+    {
+        $context = new DetectionContext(
+            originalUrl: self::URL,
+            finalUrl: self::URL,
+            html: '{"href_matches":["/wp-*.php","/wp-admin/*",'
+                . '"/wp-content/plugins/*","/wp-content/themes/*"]}',
+            statusCode: 200,
+        );
+
+        $result = $this->detector()->detect($context);
+
+        self::assertFalse($result->isDetected());
+        self::assertNull($result->plugin());
+    }
+
+    /**
      * Verify that supports() and detect() agree on the same context.
      *
      * A context the detector supports is also detected, and a context the
