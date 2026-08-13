@@ -34,7 +34,6 @@ final readonly class ScriptFingerprintRule implements RuleInterface
         'window.Ghost',
         'ghost.init',
         'ghost-sdk',
-        'Ghost',
     ];
 
     /**

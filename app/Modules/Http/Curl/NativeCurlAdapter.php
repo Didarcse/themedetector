@@ -72,7 +72,13 @@ final readonly class NativeCurlAdapter implements CurlAdapterInterface
             $rawExchange = curl_exec($handle);
 
             if (!is_string($rawExchange)) {
-                throw new HttpClientException('cURL error: ' . curl_error($handle));
+                $error = curl_error($handle);
+
+                if ($error === '') {
+                    $error = 'Unknown cURL error (errno ' . curl_errno($handle) . ').';
+                }
+
+                throw new HttpClientException('cURL error: ' . $error);
             }
 
             return $this->createResponse($url, $rawExchange, $handle);
@@ -116,6 +122,7 @@ final readonly class NativeCurlAdapter implements CurlAdapterInterface
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_USERAGENT      => $userAgent,
             CURLOPT_HTTPGET        => true,
+            CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_ENCODING       => '',

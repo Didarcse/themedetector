@@ -82,6 +82,24 @@ final class ScriptFingerprintRuleTest extends TestCase
         self::assertSame([], $result['metadata']);
     }
 
+    public function test_does_not_match_bare_ghost_name_in_css_class(): void
+    {
+        $result = $this->evaluate(
+            '<style>.btn-ghost:hover { opacity: 0.8; }</style>'
+        );
+
+        self::assertFalse($result['matched']);
+        self::assertSame([], $result['metadata']);
+    }
+
+    public function test_does_not_match_bare_ghost_name_in_plain_text(): void
+    {
+        $result = $this->evaluate('<h1>Welcome to Ghost</h1><p>Powered by Ghost</p>');
+
+        self::assertFalse($result['matched']);
+        self::assertSame([], $result['metadata']);
+    }
+
     public function test_handles_empty_html(): void
     {
         $result = $this->evaluate('');
