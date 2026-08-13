@@ -463,6 +463,72 @@ final class WordPressStyleCssLocatorTest extends TestCase
     }
 
     /**
+     * Verify that a compiled bundle named style.css inside a theme
+     * subdirectory is not mistaken for the canonical theme stylesheet.
+     *
+     * Mirrors the kinsta.com fingerprint: the page links
+     * wp-content/themes/kinsta/dist/style.css, a build artifact with no
+     * theme header, while the canonical style.css at the theme root still
+     * exists. The direct stylesheet strategy must skip the bundle and the
+     * theme directory asset strategy must assemble the canonical URL.
+     */
+    public function test_prefers_canonical_style_css_over_subdirectory_bundle(): void
+    {
+        $context = new DetectionContext(
+            originalUrl: 'https://kinsta.com/',
+            finalUrl: 'https://kinsta.com/',
+            html: "<!DOCTYPE html>\n"
+                . "<html>\n"
+                . "<head>\n"
+                . "<link rel=\"stylesheet\" href=\"https://kinsta.com/wp-content/themes/"
+                . "kinsta/dist/style.css?ver=1.2.3\">\n"
+                . "</head>\n"
+                . "<body class=\"home wp-theme-kinsta\">\n"
+                . "<script src=\"/wp-content/themes/kinsta/dist/app.js\"></script>\n"
+                . "</body>\n"
+                . "</html>",
+            statusCode: 200,
+        );
+
+        self::assertSame(
+            'https://kinsta.com/wp-content/themes/kinsta/style.css',
+            $this->locator()->locate($context),
+        );
+    }
+
+    /**
+     * Verify that a stylesheet named style.css inside a theme subdirectory
+     * yields the canonical theme stylesheet through the theme CSS asset
+     * strategy when it is the only evidence.
+     *
+     * Mirrors the colorlib.com fingerprint: the only theme reference is a
+     * wp-content/themes/sparkling-child/assets/css/style.css link, whose
+     * directory name must be resolved into the canonical
+     * /wp-content/themes/sparkling-child/style.css URL.
+     */
+    public function test_finds_canonical_style_css_from_subdirectory_bundle(): void
+    {
+        $context = new DetectionContext(
+            originalUrl: 'https://colorlib.com/',
+            finalUrl: 'https://colorlib.com/',
+            html: "<!DOCTYPE html>\n"
+                . "<html>\n"
+                . "<head>\n"
+                . "<link rel=\"stylesheet\" href=\"https://colorlib.com/wp-content/"
+                . "themes/sparkling-child/assets/css/style.css\">\n"
+                . "</head>\n"
+                . "<body class=\"home\"></body>\n"
+                . "</html>",
+            statusCode: 200,
+        );
+
+        self::assertSame(
+            'https://colorlib.com/wp-content/themes/sparkling-child/style.css',
+            $this->locator()->locate($context),
+        );
+    }
+
+    /**
      * Verify that the theme is discovered from a theme.json reference, the
      * marker of a block theme.
      */

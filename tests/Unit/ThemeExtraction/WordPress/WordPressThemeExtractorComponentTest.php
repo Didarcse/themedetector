@@ -309,6 +309,30 @@ final class WordPressThemeExtractorComponentTest extends TestCase
     }
 
     /**
+     * Verify that a stylesheet without a valid theme name yields a failed
+     * result.
+     *
+     * When the downloaded stylesheet carries no Theme Name header (for
+     * example a compiled CSS bundle mistaken for the theme stylesheet), the
+     * mapper produces a ThemeMetadata with an empty name. The extractor
+     * must never surface an empty name as an extracted theme, so it
+     * short-circuits into a failed result.
+     */
+    public function test_returns_failed_result_when_theme_name_is_empty(): void
+    {
+        $client = $this->createMock(HttpClientInterface::class);
+        $client->method('get')->willReturn($this->response(200, 'body { color: #333; }'));
+
+        $extractor = $this->extractor($this->locator(), $this->downloader($client), $this->parser(), $this->mapper());
+
+        $result = $extractor->extract($this->context());
+
+        self::assertFalse($result->isExtracted());
+        self::assertNull($result->theme());
+        self::assertSame(0, $result->confidence());
+    }
+
+    /**
      * Verify that the successful pipeline discovers the stylesheet URL.
      *
      * The URL delivered to the downloader originates exclusively from the

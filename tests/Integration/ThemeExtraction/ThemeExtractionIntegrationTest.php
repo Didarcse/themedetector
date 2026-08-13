@@ -246,6 +246,42 @@ final class ThemeExtractionIntegrationTest extends TestCase
     }
 
     /**
+     * Verify that a compiled bundle under a theme subdirectory does not
+     * steal the extraction from the canonical theme stylesheet.
+     *
+     * Mirrors the kinsta.com fingerprint: the page links
+     * wp-content/themes/kinsta/dist/style.css (a build artifact with no
+     * theme header), while the canonical style.css at the theme root
+     * carries the real header. The locator must skip the bundle, download
+     * the canonical style.css, and extract the theme from it.
+     */
+    public function test_extracts_theme_from_canonical_style_css_when_bundle_is_linked(): void
+    {
+        $client = $this->createMock(HttpClientInterface::class);
+        $client->expects(self::once())
+            ->method('get')
+            ->with('https://example.com/wp-content/themes/kinsta/style.css')
+            ->willReturn($this->response(200, self::STYLE_CSS_CONTENTS));
+
+        $context = new DetectionContext(
+            originalUrl: 'https://example.com',
+            finalUrl: 'https://example.com',
+            html: '<!DOCTYPE html>' . "\n"
+                . '<html><head>'
+                . '<link rel="stylesheet" href="/wp-content/themes/kinsta/dist/style.css?ver=1.2.3">'
+                . '</head><body class="home wp-theme-kinsta"></body></html>',
+            statusCode: 200,
+        );
+
+        $result = $this->extractor($client)->extract($context);
+
+        self::assertTrue($result->isExtracted());
+        $theme = $result->theme();
+        self::assertNotNull($theme);
+        self::assertSame('Astra', $theme->name());
+    }
+
+    /**
      * Verify that the complete pipeline is deterministic.
      *
      * Extracting twice with the same pipeline and the same detection

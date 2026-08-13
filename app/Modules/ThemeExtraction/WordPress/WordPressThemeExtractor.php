@@ -51,6 +51,9 @@ use App\Modules\ThemeExtraction\ThemeExtractionResult;
  * - Assemble and return the resulting ThemeExtractionResult.
  * - Return a failed ThemeExtractionResult when the style.css cannot be
  *   located or downloaded.
+ * - Return a failed ThemeExtractionResult when the downloaded
+ *   style.css carries no valid theme name, so that an empty name never
+ *   becomes extracted theme metadata.
  *
  * Design philosophy:
  *
@@ -114,10 +117,12 @@ final readonly class WordPressThemeExtractor implements ThemeExtractorInterface
      * - Assemble the resulting ThemeExtractionResult.
      *
      * When the style.css cannot be located or downloaded, a failed
-     * ThemeExtractionResult is returned. For the MVP, the confidence is
-     * always zero; confidence scoring is intentionally deferred to future
-     * extraction rules and scoring logic. The given DetectionContext is
-     * never modified.
+     * ThemeExtractionResult is returned. A downloaded stylesheet that
+     * carries no valid theme name is treated the same way: an empty name
+     * must never become valid theme metadata. For the MVP, the confidence
+     * is always zero; confidence scoring is intentionally deferred to
+     * future extraction rules and scoring logic. The given DetectionContext
+     * is never modified.
      *
      * @param DetectionContext $context The immutable detection context
      *                                  containing the HTTP response data.
@@ -143,6 +148,10 @@ final readonly class WordPressThemeExtractor implements ThemeExtractorInterface
 
         $rawMetadata = $this->styleCssParser->parse($styleCssContents);
         $themeMetadata = $this->metadataMapper->map($rawMetadata);
+
+        if ($themeMetadata->name() === '') {
+            return $this->notExtracted();
+        }
 
         return new ThemeExtractionResult(
             extracted: true,

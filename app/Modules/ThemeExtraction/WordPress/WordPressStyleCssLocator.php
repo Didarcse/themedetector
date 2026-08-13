@@ -28,8 +28,12 @@ use DOMXPath;
  * Strategy priorities:
  *
  * 1. Direct stylesheet link: an existing <link rel="stylesheet"> whose href
- *    contains both /wp-content/themes/ and style.css. The href is returned
- *    exactly as found.
+ *    lives under /wp-content/themes/ and names the canonical style.css
+ *    file at the theme directory root. The href is returned exactly as
+ *    found. Stylesheets deeper inside the theme directory (for example
+ *    dist/style.css or assets/css/style.css) are build or component
+ *    artifacts and are deliberately skipped here; they fall through to the
+ *    theme CSS asset strategy instead.
  * 2. Theme directory asset paths: any resource URL (script, image, source,
  *    video, audio, preloaded/prefetched link, icon, lazy-loaded data-src or
  *    data-bg) living under /wp-content/themes/{slug}/. The slug names the
@@ -72,13 +76,14 @@ final readonly class WordPressStyleCssLocator
      * Inspects the HTML already contained inside the given detection
      * context using the strategy cascade described on the class. The direct
      * stylesheet link strategy is tried first: the first <link
-     * rel="stylesheet"> href that belongs to /wp-content/themes/ and names
-     * a style.css file is returned resolved into an absolute URL. When no
-     * direct stylesheet link exists, the remaining strategies infer the
-     * theme directory name from the HTML and assemble the canonical
-     * /wp-content/themes/{slug}/style.css URL. Returns null when the HTML
-     * is empty, unparseable, or contains no theme evidence at all. The
-     * stylesheet is never verified, downloaded, or parsed.
+     * rel="stylesheet"> href that lives under /wp-content/themes/ and names
+     * the canonical style.css file at the theme directory root is returned
+     * resolved into an absolute URL. When no direct stylesheet link exists,
+     * the remaining strategies infer the theme directory name from the
+     * HTML and assemble the canonical /wp-content/themes/{slug}/style.css
+     * URL. Returns null when the HTML is empty, unparseable, or contains
+     * no theme evidence at all. The stylesheet is never verified,
+     * downloaded, or parsed.
      *
      * @param DetectionContext $context The immutable detection context
      *                                  containing the HTTP response data.
@@ -503,20 +508,42 @@ final readonly class WordPressStyleCssLocator
     /**
      * Return whether the given href belongs to an active theme stylesheet.
      *
-     * A href qualifies only when it references a file that both lives
-     * under the WordPress themes directory (/wp-content/themes/) and is
-     * named style.css. Everything else — plugin stylesheets, wp-includes
-     * assets, block library CSS, Google Fonts, and external CSS — is
-     * rejected by this rule.
+     * A href qualifies only when it references the canonical theme
+     * stylesheet: a file that both lives under the WordPress themes
+     * directory (/wp-content/themes/) and is named style.css directly at
+     * the theme directory root. A stylesheet named style.css deeper inside
+     * the theme directory (such as dist/style.css or
+     * assets/css/style.css) is a build or component artifact and is
+     * rejected by this rule; it carries no theme header and must not be
+     * mistaken for the active theme stylesheet. Everything else — plugin
+     * stylesheets, wp-includes assets, block library CSS, Google Fonts,
+     * and external CSS — is also rejected. A trailing query string or
+     * fragment is tolerated.
      *
      * @param string $href The raw stylesheet href as found in the markup.
      *
-     * @return bool True when the href is an active theme stylesheet.
+     * @return bool True when the href is the canonical active theme
+     *              stylesheet.
      */
     private function isThemeStylesheet(string $href): bool
     {
-        return str_contains($href, '/wp-content/themes/')
-            && str_contains($href, 'style.css');
+        $themeSlug = $this->themeSlugFromUrl($href);
+
+        if ($themeSlug === null) {
+            return false;
+        }
+
+        $marker = 'wp-content/themes/' . $themeSlug . '/';
+
+        $markerPos = strpos($href, $marker);
+
+        if ($markerPos === false) {
+            return false;
+        }
+
+        $relativePath = substr($href, $markerPos + strlen($marker));
+
+        return preg_match('~^style\.css($|[?#])~', $relativePath) === 1;
     }
 
     /**
