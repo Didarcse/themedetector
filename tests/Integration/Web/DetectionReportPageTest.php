@@ -66,6 +66,40 @@ Text Domain: twentytwentyfive
 */
 CSS;
 
+    private const NO_DETECTION_HTML = <<<'HTML'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Static Site</title>
+</head>
+<body>
+    <h1>Hello</h1>
+</body>
+</html>
+HTML;
+
+    private const MINIMAL_THEME_HTML = <<<'HTML'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Example Blog</title>
+    <meta name="generator" content="WordPress 6.7.1">
+    <link rel="stylesheet" href="/wp-content/themes/minimal/style.css">
+</head>
+<body>
+    <h1>Example Blog</h1>
+</body>
+</html>
+HTML;
+
+    private const MINIMAL_THEME_CSS = <<<'CSS'
+/*
+Theme Name: Minimal Theme
+*/
+CSS;
+
     public function test_home_page_renders_search_form(): void
     {
         $kernel = $this->kernel(new PageFakeHttpClient(self::HOMEPAGE_HTML, self::STYLESHEET_CSS));
@@ -118,6 +152,37 @@ CSS;
         $this->assertSame(200, $response->status());
         $this->assertStringContainsString('Detection failed', $response->content());
         $this->assertStringContainsString('valid website URL', $response->content());
+    }
+
+    public function test_report_page_without_detections_hides_theme_metadata_and_note(): void
+    {
+        $kernel = $this->kernel(new PageFakeHttpClient(self::NO_DETECTION_HTML, ''));
+
+        $response = $kernel->handle(
+            $this->request('POST', '/detect', post: ['url' => 'example.com']),
+        );
+
+        $this->assertSame(200, $response->status());
+        $this->assertStringContainsString('No CMS detected', $response->content());
+        $this->assertStringContainsString('No theme detected', $response->content());
+        $this->assertStringContainsString('No plugins detected', $response->content());
+        $this->assertStringNotContainsString('Theme Metadata', $response->content());
+        $this->assertStringNotContainsString('technologies detected', $response->content());
+    }
+
+    public function test_report_page_with_minimal_theme_omits_unknown_rows_and_empty_metadata(): void
+    {
+        $kernel = $this->kernel(new PageFakeHttpClient(self::MINIMAL_THEME_HTML, self::MINIMAL_THEME_CSS));
+
+        $response = $kernel->handle(
+            $this->request('POST', '/detect', post: ['url' => 'example.com']),
+        );
+
+        $this->assertSame(200, $response->status());
+        $this->assertStringContainsString('WordPress', $response->content());
+        $this->assertStringContainsString('Minimal Theme', $response->content());
+        $this->assertStringNotContainsString('Theme Metadata', $response->content());
+        $this->assertStringNotContainsString('Unknown', $response->content());
     }
 
     /**

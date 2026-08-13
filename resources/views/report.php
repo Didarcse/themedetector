@@ -37,9 +37,11 @@ if ($report !== null && !$report->hasError()) {
         $statusText = $cms . ' detected';
     }
 
-    $scoreNote = $technologyCount === 1
-        ? '1 technology detected'
-        : $technologyCount . ' technologies detected';
+    if ($hasDetection) {
+        $scoreNote = $technologyCount === 1
+            ? '1 technology detected'
+            : $technologyCount . ' technologies detected';
+    }
 
     $websiteItems = [
         [
@@ -87,22 +89,33 @@ if ($report !== null && !$report->hasError()) {
             'value' => $themeMetadata->name(),
             'badge' => $themeConfidence > 0 ? $themeConfidence . '%' : '',
         ];
-        $themeItems[] = ['label' => 'Version', 'value' => $themeMetadata->version() ?? 'Unknown'];
-        $themeItems[] = [
-            'label' => 'Author',
-            'value' => $themeMetadata->author() ?? 'Unknown',
-            'link' => $themeMetadata->authorUrl() ?? '',
-        ];
-        $themeItems[] = [
-            'label' => 'Theme URL',
-            'value' => $themeMetadata->themeUrl() ?? 'Unknown',
-            'link' => $themeMetadata->themeUrl() ?? '',
-        ];
-        $themeItems[] = [
-            'label' => 'License',
-            'value' => $themeMetadata->license() ?? 'Unknown',
-            'link' => $themeMetadata->licenseUrl() ?? '',
-        ];
+        if ($themeMetadata->version() !== null) {
+            $themeItems[] = ['label' => 'Version', 'value' => $themeMetadata->version()];
+        }
+
+        if ($themeMetadata->author() !== null) {
+            $themeItems[] = [
+                'label' => 'Author',
+                'value' => $themeMetadata->author(),
+                'link' => $themeMetadata->authorUrl() ?? '',
+            ];
+        }
+
+        if ($themeMetadata->themeUrl() !== null) {
+            $themeItems[] = [
+                'label' => 'Theme URL',
+                'value' => $themeMetadata->themeUrl(),
+                'link' => $themeMetadata->themeUrl(),
+            ];
+        }
+
+        if ($themeMetadata->license() !== null) {
+            $themeItems[] = [
+                'label' => 'License',
+                'value' => $themeMetadata->license(),
+                'link' => $themeMetadata->licenseUrl() ?? '',
+            ];
+        }
 
         $extra = [
             'description' => $themeMetadata->description(),
@@ -227,10 +240,12 @@ if ($report !== null && !$report->hasError()) {
             </div>
 
             <div class="row g-4 mb-4">
-                <div class="col-lg-6">
-                    <?= view('partials.report-card', ['title' => 'Theme Metadata', 'items' => $themeMetadataItems]) ?>
-                </div>
-                <div class="col-lg-6">
+                <?php if ($themeMetadataItems !== []): ?>
+                    <div class="col-lg-6">
+                        <?= view('partials.report-card', ['title' => 'Theme Metadata', 'items' => $themeMetadataItems]) ?>
+                    </div>
+                <?php endif; ?>
+                <div class="<?= $themeMetadataItems !== [] ? 'col-lg-6' : 'col-lg-12' ?>">
                     <div class="card border-0 shadow-sm mb-4 h-100">
                         <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
                             <h2 class="h5 fw-bold mb-0">Detected Plugins</h2>
