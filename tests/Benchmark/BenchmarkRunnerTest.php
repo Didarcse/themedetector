@@ -16,7 +16,12 @@ use App\Modules\ThemeExtraction\ThemeExtractor;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistryFactory;
 use PHPUnit\Framework\TestCase;
 use Tests\Benchmark\Contracts\BenchmarkCaseProvider;
+use Tests\Benchmark\Drupal\DrupalBenchmarkCases;
+use Tests\Benchmark\Ghost\GhostBenchmarkCases;
+use Tests\Benchmark\Joomla\JoomlaBenchmarkCases;
 use Tests\Benchmark\Shopify\ShopifyBenchmarkCases;
+use Tests\Benchmark\Squarespace\SquarespaceBenchmarkCases;
+use Tests\Benchmark\TYPO3\Typo3BenchmarkCases;
 use Tests\Benchmark\Webflow\WebflowBenchmarkCases;
 use Tests\Benchmark\Wix\WixBenchmarkCases;
 use Tests\Benchmark\WordPress\WordPressCommercialThemeCases;
@@ -58,7 +63,7 @@ final class BenchmarkRunnerTest extends TestCase
 
         $report = $this->runner($this->allProviders(), $offline)->run();
 
-        $this->assertSame(21, $report->totalCases());
+        $this->assertSame(41, $report->totalCases());
         $this->assertNotEmpty($offline->requestedUrls());
 
         $this->assertContains(
@@ -75,6 +80,42 @@ final class BenchmarkRunnerTest extends TestCase
             'https://www.acme-agency.com/wp-content/themes/astra/style.css',
             $offline->requestedUrls(),
         );
+    }
+
+    public function test_new_providers_request_only_in_domain_fixture_origins(): void
+    {
+        $offline = new OfflineHttpClient();
+
+        $providers = [
+            new JoomlaBenchmarkCases(),
+            new DrupalBenchmarkCases(),
+            new GhostBenchmarkCases(),
+            new Typo3BenchmarkCases(),
+            new SquarespaceBenchmarkCases(),
+        ];
+
+        $report = $this->runner($providers, $offline)->run();
+
+        $this->assertSame(20, $report->totalCases());
+        $this->assertSame(0, $report->transportFailures());
+
+        $origins = [];
+
+        foreach ($providers as $provider) {
+            foreach ($provider->cases() as $case) {
+                $origins[] = $this->host($case->url());
+            }
+        }
+
+        $this->assertNotEmpty($offline->requestedUrls());
+
+        foreach ($offline->requestedUrls() as $url) {
+            $this->assertContains(
+                $this->host($url),
+                $origins,
+                "Unexpected out-of-domain request: {$url}",
+            );
+        }
     }
 
     public function test_offline_client_serves_seeded_responses_and_404s_unknown_urls(): void
@@ -169,6 +210,23 @@ final class BenchmarkRunnerTest extends TestCase
             new ShopifyBenchmarkCases(),
             new WixBenchmarkCases(),
             new WebflowBenchmarkCases(),
+            new JoomlaBenchmarkCases(),
+            new DrupalBenchmarkCases(),
+            new GhostBenchmarkCases(),
+            new Typo3BenchmarkCases(),
+            new SquarespaceBenchmarkCases(),
         ];
+    }
+
+    /**
+     * Extract the host from an absolute URL.
+     *
+     * @param string $url The absolute URL.
+     *
+     * @return string The hostname.
+     */
+    private function host(string $url): string
+    {
+        return (string) parse_url($url, PHP_URL_HOST);
     }
 }
