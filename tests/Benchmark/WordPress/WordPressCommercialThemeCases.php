@@ -51,6 +51,16 @@ final class WordPressCommercialThemeCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'Divi',
                 expectedPlugins: ['contact-form-7'],
+                responses: [
+                    'https://www.buildtogether.net/wp-content/themes/Divi/style.css' => "/*\n"
+                        . "Theme Name: Divi\n"
+                        . "Version: 4.27.4\n"
+                        . "*/",
+                    'https://www.buildtogether.net/wp-content/themes/divi/style.css' => "/*\n"
+                        . "Theme Name: Divi\n"
+                        . "Version: 4.27.4\n"
+                        . "*/",
+                ],
             ),
             new BenchmarkCase(
                 name: 'wordpress.commercial-theme.avada',
@@ -72,6 +82,16 @@ final class WordPressCommercialThemeCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'Avada',
                 expectedPlugins: ['woocommerce'],
+                responses: [
+                    'https://www.ledgercorp.io/wp-content/themes/Avada/style.css' => "/*\n"
+                        . "Theme Name: Avada\n"
+                        . "Version: 7.11.10\n"
+                        . "*/",
+                    'https://www.ledgercorp.io/wp-content/themes/avada/style.css' => "/*\n"
+                        . "Theme Name: Avada\n"
+                        . "Version: 7.11.10\n"
+                        . "*/",
+                ],
             ),
             new BenchmarkCase(
                 name: 'wordpress.commercial-theme.betheme',
@@ -93,7 +113,23 @@ final class WordPressCommercialThemeCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'BeTheme',
                 expectedPlugins: ['wordpress-seo'],
+                responses: [
+                    'https://www.braveagency.com/wp-content/themes/betheme/style.css' => "/*\n"
+                        . "Theme Name: BeTheme\n"
+                        . "Version: 27.2\n"
+                        . "*/",
+                ],
             ),
         ];
+    }
+
+    /**
+     * Return the platform this provider covers.
+     *
+     * @return string The platform name.
+     */
+    public function platform(): string
+    {
+        return 'WordPress';
     }
 }

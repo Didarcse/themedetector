@@ -52,6 +52,12 @@ final class WordPressPopularPluginCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'OceanWP',
                 expectedPlugins: ['contact-form-7'],
+                responses: [
+                    'https://www.example.org/wp-content/themes/oceanwp/style.css' => "/*\n"
+                        . "Theme Name: OceanWP\n"
+                        . "Version: 3.5.7\n"
+                        . "*/",
+                ],
             ),
             new BenchmarkCase(
                 name: 'wordpress.popular-plugin.woocommerce',
@@ -73,6 +79,12 @@ final class WordPressPopularPluginCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'Storefront',
                 expectedPlugins: ['woocommerce'],
+                responses: [
+                    'https://www.shopstore.dev/wp-content/themes/storefront/style.css' => "/*\n"
+                        . "Theme Name: Storefront\n"
+                        . "Version: 4.6.0\n"
+                        . "*/",
+                ],
             ),
             new BenchmarkCase(
                 name: 'wordpress.popular-plugin.yoast-seo',
@@ -94,7 +106,23 @@ final class WordPressPopularPluginCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'Twenty Twenty-Four',
                 expectedPlugins: ['wordpress-seo'],
+                responses: [
+                    'https://www.readme.io/wp-content/themes/twentytwentyfour/style.css' => "/*\n"
+                        . "Theme Name: Twenty Twenty-Four\n"
+                        . "Version: 1.2\n"
+                        . "*/",
+                ],
             ),
         ];
+    }
+
+    /**
+     * Return the platform this provider covers.
+     *
+     * @return string The platform name.
+     */
+    public function platform(): string
+    {
+        return 'WordPress';
     }
 }

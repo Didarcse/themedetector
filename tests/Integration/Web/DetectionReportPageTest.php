@@ -16,6 +16,7 @@ use App\Core\View;
 use App\Controllers\AboutController;
 use App\Controllers\DetectionController;
 use App\Controllers\HomeController;
+use App\Controllers\SeoController;
 use App\Modules\Detection\Core\DetectionPipeline;
 use App\Modules\Detection\DetectionContextFactory;
 use App\Modules\Detection\DetectionEngine;
@@ -303,6 +304,11 @@ CSS;
         $container->set(
             AboutController::class,
             static fn (): AboutController => new AboutController(),
+        );
+
+        $container->set(
+            SeoController::class,
+            static fn (): SeoController => new SeoController(),
         );
 
         $container->set(

@@ -52,6 +52,12 @@ final class WordPressDefaultThemeCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'Twenty Twenty-Five',
                 expectedPlugins: [],
+                responses: [
+                    'https://www.plainblog.net/wp-content/themes/twentytwentyfive/style.css' => "/*\n"
+                        . "Theme Name: Twenty Twenty-Five\n"
+                        . "Version: 1.0\n"
+                        . "*/",
+                ],
             ),
             new BenchmarkCase(
                 name: 'wordpress.default-theme.twenty-twenty-four',
@@ -72,6 +78,12 @@ final class WordPressDefaultThemeCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'Twenty Twenty-Four',
                 expectedPlugins: [],
+                responses: [
+                    'https://www.personalnotes.me/wp-content/themes/twentytwentyfour/style.css' => "/*\n"
+                        . "Theme Name: Twenty Twenty-Four\n"
+                        . "Version: 1.2\n"
+                        . "*/",
+                ],
             ),
             new BenchmarkCase(
                 name: 'wordpress.default-theme.twenty-seventeen',
@@ -92,7 +104,23 @@ final class WordPressDefaultThemeCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'Twenty Seventeen',
                 expectedPlugins: [],
+                responses: [
+                    'https://www.oldschool.wp/wp-content/themes/twentyseventeen/style.css' => "/*\n"
+                        . "Theme Name: Twenty Seventeen\n"
+                        . "Version: 2.9\n"
+                        . "*/",
+                ],
             ),
         ];
+    }
+
+    /**
+     * Return the platform this provider covers.
+     *
+     * @return string The platform name.
+     */
+    public function platform(): string
+    {
+        return 'WordPress';
     }
 }

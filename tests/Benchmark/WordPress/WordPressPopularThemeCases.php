@@ -51,6 +51,12 @@ final class WordPressPopularThemeCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'Astra',
                 expectedPlugins: ['contact-form-7'],
+                responses: [
+                    'https://www.acme-agency.com/wp-content/themes/astra/style.css' => "/*\n"
+                        . "Theme Name: Astra\n"
+                        . "Version: 4.8.3\n"
+                        . "*/",
+                ],
             ),
             new BenchmarkCase(
                 name: 'wordpress.popular-theme.generatepress',
@@ -72,6 +78,12 @@ final class WordPressPopularThemeCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'GeneratePress',
                 expectedPlugins: ['woocommerce'],
+                responses: [
+                    'https://www.fresh-look.com/wp-content/themes/generatepress/style.css' => "/*\n"
+                        . "Theme Name: GeneratePress\n"
+                        . "Version: 3.5.1\n"
+                        . "*/",
+                ],
             ),
             new BenchmarkCase(
                 name: 'wordpress.popular-theme.kadence',
@@ -93,7 +105,23 @@ final class WordPressPopularThemeCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'Kadence',
                 expectedPlugins: ['akismet'],
+                responses: [
+                    'https://www.northcreek.io/wp-content/themes/kadence/style.css' => "/*\n"
+                        . "Theme Name: Kadence\n"
+                        . "Version: 1.2.9\n"
+                        . "*/",
+                ],
             ),
         ];
+    }
+
+    /**
+     * Return the platform this provider covers.
+     *
+     * @return string The platform name.
+     */
+    public function platform(): string
+    {
+        return 'WordPress';
     }
 }

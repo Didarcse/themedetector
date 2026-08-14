@@ -37,39 +37,53 @@ namespace Tests\Benchmark;
  *   one was expected; nothing was identified when none was expected.
  * - Theme Detection Accuracy: when a theme is expected, it was reported;
  *   when no theme is expected (platforms without a theme concept), no
- *   theme was claimed.
+ *   theme was claimed. The reported theme and its version come from the
+ *   real Theme Extractor engine.
  * - Plugin Detection Accuracy: the detected plugin set equals the expected
  *   plugin set exactly.
  * - False Positive: a CMS detection was produced that is incorrect.
  * - False Negative: an expected CMS was not correctly identified.
+ * - Transport Failure: the engines could not evaluate the case because an
+ *   outbound request failed at the transport level; the case is recorded
+ *   but never counted as a false positive or negative.
  * - A case is successful when its CMS detection is accurate.
  */
 final readonly class BenchmarkResult
 {
     /**
-     * @param BenchmarkCase $case               The benchmark case being
-     *                                          evaluated.
-     * @param bool          $detected           Whether the engine detected a
-     *                                          CMS.
-     * @param string|null   $detectedTechnology The detected CMS technology,
-     *                                          null when nothing was
-     *                                          detected.
-     * @param string|null   $detectedTheme      The theme reported by the
-     *                                          engine.
-     * @param list<string>  $detectedPlugins    The plugin slugs reported by
-     *                                          the engine.
-     * @param int           $confidence         The confidence score (0–100).
-     * @param float         $executionTime      The measured execution time
-     *                                          in seconds.
+     * @param BenchmarkCase $case                  The benchmark case being
+     *                                             evaluated.
+     * @param bool          $detected              Whether the engine detected
+     *                                             a CMS.
+     * @param string|null   $detectedTechnology    The detected CMS technology,
+     *                                             null when nothing was
+     *                                             detected.
+     * @param string|null   $detectedTheme         The theme reported by the
+     *                                             Theme Extractor engine.
+     * @param string|null   $detectedThemeVersion  The theme version reported
+     *                                             by the Theme Extractor
+     *                                             engine, null when the
+     *                                             stylesheet declares none.
+     * @param list<string>  $detectedPlugins       The plugin slugs reported
+     *                                             by the engine.
+     * @param int           $confidence            The confidence score (0–100).
+     * @param float         $executionTime         The measured execution time
+     *                                             in seconds.
+     * @param bool          $transportFailure      Whether the case could not
+     *                                             be evaluated because an
+     *                                             outbound request failed at
+     *                                             the transport level.
      */
     public function __construct(
         private BenchmarkCase $case,
         private bool $detected,
         private ?string $detectedTechnology,
         private ?string $detectedTheme,
+        private ?string $detectedThemeVersion,
         private array $detectedPlugins,
         private int $confidence,
         private float $executionTime,
+        private bool $transportFailure = false,
     ) {
     }
 
@@ -113,6 +127,33 @@ final readonly class BenchmarkResult
     public function detectedTheme(): ?string
     {
         return $this->detectedTheme;
+    }
+
+    /**
+     * Return the theme version reported by the Theme Extractor engine.
+     *
+     * @return string|null The reported theme version, or null when the
+     *                     stylesheet declares none.
+     */
+    public function detectedThemeVersion(): ?string
+    {
+        return $this->detectedThemeVersion;
+    }
+
+    /**
+     * Return whether the case could not be evaluated due to a transport
+     * failure.
+     *
+     * A transport failure means an outbound request failed at the HTTP
+     * layer before detection could complete. Such cases are recorded and
+     * counted separately; they are never treated as false positives or
+     * false negatives.
+     *
+     * @return bool True when a transport failure occurred.
+     */
+    public function isTransportFailure(): bool
+    {
+        return $this->transportFailure;
     }
 
     /**

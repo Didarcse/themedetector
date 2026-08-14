@@ -44,4 +44,16 @@ interface BenchmarkCaseProvider
      * @return list<BenchmarkCase> The provided benchmark cases.
      */
     public function cases(): array;
+
+    /**
+     * Return the platform this provider covers.
+     *
+     * The platform name lets the suite report which supported platforms
+     * were exercised and which were not, so an aggregate accuracy rate is
+     * never mistaken for coverage of a platform that has no cases.
+     *
+     * @return string The platform name, for example 'WordPress' or
+     *                'Shopify'.
+     */
+    public function platform(): string;
 }

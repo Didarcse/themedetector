@@ -12,12 +12,15 @@ namespace Tests\Benchmark;
  * case and exposes the aggregate metrics used to measure the real-world
  * accuracy of the detection engine: total cases, successful and failed
  * detections, CMS/theme/plugin accuracy rates, false positives, false
- * negatives, average confidence, and average runtime.
+ * negatives, transport failures, exercised categories and platforms, the
+ * platforms the suite does not cover, average confidence, and average
+ * runtime.
  *
  * Responsibilities:
  *
  * - Aggregate every BenchmarkResult in evaluation order.
  * - Compute the aggregate benchmark metrics.
+ * - Report which supported platforms the suite does and does not exercise.
  * - Render a human-readable console summary.
  * - Nothing else.
  *
@@ -30,6 +33,10 @@ namespace Tests\Benchmark;
  *   always identical.
  * - Division is guarded: an empty report yields zero averages and zero
  *   accuracy rates, never a division-by-zero error.
+ * - Honest reporting: an accuracy rate is only ever computed over the
+ *   cases actually evaluated, and the platforms the suite does not
+ *   exercise are reported explicitly instead of being folded into an
+ *   aggregate.
  *
  * Metric semantics:
  *
@@ -37,17 +44,44 @@ namespace Tests\Benchmark;
  * - Failed detections: the remaining cases.
  * - CMS/Theme/Plugin accuracy: the percentage of cases whose respective
  *   metric is accurate.
+ * - Transport failures: cases the engines could not evaluate because an
+ *   outbound request failed at the transport level.
+ * - Missing platforms: the supported platforms that have no cases in this
+ *   report.
  * - Average confidence and average runtime: means over every evaluated
  *   case.
  */
 final readonly class BenchmarkReport
 {
     /**
-     * @param list<BenchmarkResult> $results The evaluation results, in
-     *                                       evaluation order.
+     * The platforms the detection engine supports and the benchmark suite
+     * is expected to cover.
+     *
+     * @var list<string>
+     */
+    private const SUPPORTED_PLATFORMS = [
+        'WordPress',
+        'Shopify',
+        'Wix',
+        'Webflow',
+        'Joomla',
+        'Drupal',
+        'Ghost',
+        'TYPO3',
+        'Squarespace',
+    ];
+
+    /**
+     * @param list<BenchmarkResult> $results            The evaluation
+     *                                                  results, in
+     *                                                  evaluation order.
+     * @param list<string>          $exercisedPlatforms The platforms covered
+     *                                                  by the providers that
+     *                                                  produced this report.
      */
     public function __construct(
         private array $results,
+        private array $exercisedPlatforms = [],
     ) {
     }
 
@@ -211,16 +245,87 @@ final readonly class BenchmarkReport
     }
 
     /**
+     * Return the number of transport failures.
+     *
+     * A transport failure is a case the engines could not evaluate because
+     * an outbound request failed at the HTTP layer. Transport failures are
+     * reported separately and are never counted as false positives or
+     * false negatives.
+     *
+     * @return int The transport-failure count.
+     */
+    public function transportFailures(): int
+    {
+        $count = 0;
+
+        foreach ($this->results as $result) {
+            if ($result->isTransportFailure()) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Return the number of evaluated cases per category.
+     *
+     * @return array<string, int> The case counts keyed by category, in
+     *                            first-appearance order.
+     */
+    public function categories(): array
+    {
+        $categories = [];
+
+        foreach ($this->results as $result) {
+            $category = $result->case()->category();
+            $categories[$category] = ($categories[$category] ?? 0) + 1;
+        }
+
+        return $categories;
+    }
+
+    /**
+     * Return the platforms exercised by the providers of this report.
+     *
+     * @return list<string> The exercised platform names.
+     */
+    public function exercisedPlatforms(): array
+    {
+        return $this->exercisedPlatforms;
+    }
+
+    /**
+     * Return the supported platforms the suite does not exercise.
+     *
+     * A missing platform has no cases in this report, so its accuracy can
+     * never be claimed by the aggregate metrics.
+     *
+     * @return list<string> The supported platforms with no cases.
+     */
+    public function missingPlatforms(): array
+    {
+        return array_values(array_diff(self::SUPPORTED_PLATFORMS, $this->exercisedPlatforms));
+    }
+
+    /**
      * Render the human-readable console summary of this report.
      *
      * The summary lists the headline metrics: total websites, successful
      * and failed detections, the three accuracy rates, false positives and
-     * negatives, average confidence, and average runtime.
+     * negatives, transport failures, exercised categories, missing
+     * platforms, average confidence, and average runtime.
      *
      * @return string The formatted console summary.
      */
     public function summary(): string
     {
+        $categories = [];
+
+        foreach ($this->categories() as $category => $count) {
+            $categories[] = "{$category} ({$count})";
+        }
+
         $lines = [
             'Detection Benchmark Summary',
             '===========================',
@@ -232,6 +337,12 @@ final readonly class BenchmarkReport
             sprintf('Plugin detection accuracy:%.1f%%', $this->pluginAccuracy()),
             sprintf('False positives:          %d', $this->falsePositives()),
             sprintf('False negatives:          %d', $this->falseNegatives()),
+            sprintf('Transport failures:       %d', $this->transportFailures()),
+            sprintf('Categories exercised:     %s', $categories === [] ? 'none' : implode(', ', $categories)),
+            sprintf(
+                'Platforms not exercised:  %s',
+                $this->missingPlatforms() === [] ? 'none' : implode(', ', $this->missingPlatforms()),
+            ),
             sprintf('Average confidence:       %.1f', $this->averageConfidence()),
             sprintf('Average runtime:          %.6fs', $this->averageRuntime()),
         ];

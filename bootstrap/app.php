@@ -13,6 +13,7 @@ use App\Controllers\AboutController;
 use App\Controllers\DetectionController;
 use App\Controllers\HomeController;
 use App\Controllers\LoadingController;
+use App\Controllers\SeoController;
 use App\Modules\Detection\Core\DetectionPipeline;
 use App\Modules\Detection\DetectionContextFactory;
 use App\Modules\Detection\DetectionEngine;
@@ -151,6 +152,11 @@ $container->set(
 $container->set(
     LoadingController::class,
     static fn (): LoadingController => new LoadingController(),
+);
+
+$container->set(
+    SeoController::class,
+    static fn (): SeoController => new SeoController(),
 );
 
 $router = new Router();

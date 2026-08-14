@@ -9,8 +9,10 @@ namespace App\Modules\Http;
  *
  * Wraps cURL behind a clean API and returns immutable HttpResponse objects.
  * Every request automatically creates and releases its own CurlHandle.
+ * The class is not final so test doubles may subclass it and override the
+ * transport without changing any consumer.
  */
-final class HttpClient
+class HttpClient
 {
     /**
      * Validate a URL string and return the trimmed, valid value.

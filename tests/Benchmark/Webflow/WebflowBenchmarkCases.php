@@ -79,4 +79,14 @@ final class WebflowBenchmarkCases implements BenchmarkCaseProvider
             ),
         ];
     }
+
+    /**
+     * Return the platform this provider covers.
+     *
+     * @return string The platform name.
+     */
+    public function platform(): string
+    {
+        return 'Webflow';
+    }
 }

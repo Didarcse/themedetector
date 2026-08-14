@@ -6,18 +6,21 @@ namespace Tests\Benchmark;
 
 use App\Modules\Detection\DetectionContext;
 use App\Modules\Detection\DetectionManager;
+use App\Modules\Http\HttpException;
 use App\Modules\PluginDetection\PluginDetectionManager;
 use App\Modules\PluginDetection\PluginDetectionResult;
+use App\Modules\ThemeExtraction\ThemeExtractor;
 use Tests\Benchmark\Contracts\BenchmarkCaseProvider;
+use Tests\Support\OfflineHttpClient;
 
 /**
  * Orchestrates the complete Detection Benchmark run.
  *
  * BenchmarkRunner is the entry point of the Detection Benchmark Suite. It
  * executes every benchmark case provided by the registered case providers
- * against the real detection engine — the CMS DetectionManager and the
- * PluginDetectionManager — measures the execution time of every case, and
- * assembles the resulting BenchmarkReport.
+ * against the real detection engines — the CMS DetectionManager, the
+ * PluginDetectionManager, and the ThemeExtractor — measures the execution
+ * time of every case, and assembles the resulting BenchmarkReport.
  *
  * This is NOT a test suite: the runner never asserts, never throws on a
  * failed detection, and never produces a pass/fail verdict for the build.
@@ -29,8 +32,11 @@ use Tests\Benchmark\Contracts\BenchmarkCaseProvider;
  * - Obtain every benchmark case from the registered providers.
  * - Build an immutable DetectionContext for every case from its offline
  *   HTML fixture.
- * - Execute the DetectionManager and the PluginDetectionManager against
- *   the context.
+ * - Seed the offline HTTP client with the case's fixture responses.
+ * - Execute the DetectionManager, the PluginDetectionManager, and the
+ *   real ThemeExtractor against the context.
+ * - Record the detected theme name and version from the ThemeExtractor.
+ * - Record transport failures separately from detection outcomes.
  * - Measure the execution time of every case.
  * - Assemble one BenchmarkResult per case and one BenchmarkReport.
  *
@@ -38,12 +44,14 @@ use Tests\Benchmark\Contracts\BenchmarkCaseProvider;
  *
  * - Orchestrator: the runner coordinates the engines and the cases and
  *   performs no detection, no parsing, no scoring, and no HTTP of its own.
- * - Dependency Injection: the detection engines and the case providers are
- *   provided through the constructor.
+ * - Dependency Injection: the detection engines, the theme extractor, the
+ *   offline HTTP client, and the case providers are provided through the
+ *   constructor.
  * - Open/Closed Principle: new platforms and categories are introduced by
  *   new providers without modifying the runner.
- * - No HTTP implementation: every case carries its HTML fixture; the
- *   benchmark never performs network requests.
+ * - Honest offline execution: every network request the engines would
+ *   make flows through the injected OfflineHttpClient, which serves the
+ *   per-case fixture responses and never touches the network.
  * - Stateless, deterministic, and side-effect free: given the same engines
  *   and providers, run() always produces the same report.
  *
@@ -52,10 +60,12 @@ use Tests\Benchmark\Contracts\BenchmarkCaseProvider;
  *     $runner = new BenchmarkRunner(
  *         $detectionManager,
  *         $pluginDetectionManager,
+ *         $themeExtractor,
  *         [
  *             new WordPressPopularThemeCases(),
  *             new ShopifyBenchmarkCases(),
  *         ],
+ *         $offlineHttpClient,
  *     );
  *
  *     echo $runner->run()->summary();
@@ -63,19 +73,29 @@ use Tests\Benchmark\Contracts\BenchmarkCaseProvider;
 final readonly class BenchmarkRunner
 {
     /**
-     * @param DetectionManager              $detectionManager       The CMS
-     *                                                              detection
-     *                                                              engine.
-     * @param PluginDetectionManager        $pluginDetectionManager The plugin
-     *                                                              detection
-     *                                                              engine.
-     * @param iterable<BenchmarkCaseProvider> $caseProviders         The case
-     *                                                              providers.
+     * @param DetectionManager                $detectionManager       The CMS
+     *                                                                detection
+     *                                                                engine.
+     * @param PluginDetectionManager          $pluginDetectionManager The plugin
+     *                                                                detection
+     *                                                                engine.
+     * @param ThemeExtractor                  $themeExtractor         The real
+     *                                                                Theme
+     *                                                                Extractor
+     *                                                                engine.
+     * @param iterable<BenchmarkCaseProvider> $caseProviders          The case
+     *                                                                providers.
+     * @param OfflineHttpClient               $offlineHttpClient      The offline
+     *                                                                HTTP client
+     *                                                                seeded per
+     *                                                                case.
      */
     public function __construct(
         private DetectionManager $detectionManager,
         private PluginDetectionManager $pluginDetectionManager,
+        private ThemeExtractor $themeExtractor,
         private iterable $caseProviders,
+        private OfflineHttpClient $offlineHttpClient,
     ) {
     }
 
@@ -84,7 +104,8 @@ final readonly class BenchmarkRunner
      *
      * Every case provided by the registered providers is executed against
      * the detection engines in provider order. A failed detection is
-     * recorded, never thrown. An engine failure is unrecoverable and
+     * recorded, never thrown. A transport failure is recorded on the case
+     * result, never thrown. An engine failure is unrecoverable and
      * propagates, since a broken engine must abort the benchmark rather
      * than silently skew its metrics.
      *
@@ -98,15 +119,17 @@ final readonly class BenchmarkRunner
             $results[] = $this->runCase($case);
         }
 
-        return new BenchmarkReport($results);
+        return new BenchmarkReport($results, $this->exercisedPlatforms());
     }
 
     /**
      * Execute a single benchmark case and produce its evaluation result.
      *
-     * Builds an immutable DetectionContext from the case fixture, executes
-     * both detection engines within a single timed window, and derives the
-     * detected technology, theme, and plugin set from their results.
+     * Seeds the offline HTTP client with the case fixture responses,
+     * builds an immutable DetectionContext from the case HTML fixture,
+     * executes the detection engines and the real ThemeExtractor within a
+     * single timed window, and derives the detected technology, theme,
+     * theme version, and plugin set from their results.
      *
      * @param BenchmarkCase $case The benchmark case to execute.
      *
@@ -114,6 +137,8 @@ final readonly class BenchmarkRunner
      */
     private function runCase(BenchmarkCase $case): BenchmarkResult
     {
+        $this->offlineHttpClient->seed($case->responses());
+
         $context = new DetectionContext(
             originalUrl: $case->url(),
             finalUrl: $case->url(),
@@ -123,19 +148,34 @@ final readonly class BenchmarkRunner
 
         $start = hrtime(true);
 
-        $detection = $this->detectionManager->detect($context);
-        $pluginDetection = $this->pluginDetectionManager->detect($context);
+        $transportFailure = false;
+        $detection = null;
+        $pluginDetection = null;
+        $themeExtraction = null;
+
+        try {
+            $detection = $this->detectionManager->detect($context);
+            $pluginDetection = $this->pluginDetectionManager->detect($context);
+            $themeExtraction = $this->themeExtractor->extract($context);
+        } catch (HttpException) {
+            $transportFailure = true;
+        }
 
         $executionTime = (hrtime(true) - $start) / 1_000_000_000;
 
+        $detected = $detection?->isDetected() ?? false;
+        $theme = $themeExtraction?->theme();
+
         return new BenchmarkResult(
             case: $case,
-            detected: $detection->isDetected(),
-            detectedTechnology: $detection->isDetected() ? $detection->technology() : null,
-            detectedTheme: $detection->theme(),
+            detected: $detected,
+            detectedTechnology: $detected ? $detection->technology() : null,
+            detectedTheme: $theme?->name(),
+            detectedThemeVersion: $theme?->version(),
             detectedPlugins: $this->extractPlugins($pluginDetection),
-            confidence: $detection->confidence(),
+            confidence: $detected ? $detection->confidence() : 0,
             executionTime: $executionTime,
+            transportFailure: $transportFailure,
         );
     }
 
@@ -161,20 +201,41 @@ final readonly class BenchmarkRunner
     }
 
     /**
+     * Collect the platforms exercised by the registered providers.
+     *
+     * The platform names are reported by the BenchmarkReport so that the
+     * suite states explicitly which supported platforms were measured and
+     * which were not.
+     *
+     * @return list<string> The exercised platform names, in provider order.
+     */
+    private function exercisedPlatforms(): array
+    {
+        $platforms = [];
+
+        foreach ($this->caseProviders as $provider) {
+            $platforms[] = $provider->platform();
+        }
+
+        return array_values(array_unique($platforms));
+    }
+
+    /**
      * Extract the reported plugin slug set from a plugin detection result.
      *
      * The plugin detection engine reports a single primary plugin; its
      * slug becomes the sole entry of the detected set. An undetected or
-     * slug-less result contributes an empty set.
+     * slug-less result, as well as a case that failed at the transport
+     * level, contributes an empty set.
      *
-     * @param PluginDetectionResult $pluginDetection The plugin detection
-     *                                               result.
+     * @param PluginDetectionResult|null $pluginDetection The plugin
+     *                                                    detection result.
      *
      * @return list<string> The detected plugin slugs.
      */
-    private function extractPlugins(PluginDetectionResult $pluginDetection): array
+    private function extractPlugins(?PluginDetectionResult $pluginDetection): array
     {
-        if (!$pluginDetection->isDetected()) {
+        if ($pluginDetection === null || !$pluginDetection->isDetected()) {
             return [];
         }
 

@@ -81,4 +81,14 @@ final class ShopifyBenchmarkCases implements BenchmarkCaseProvider
             ),
         ];
     }
+
+    /**
+     * Return the platform this provider covers.
+     *
+     * @return string The platform name.
+     */
+    public function platform(): string
+    {
+        return 'Shopify';
+    }
 }

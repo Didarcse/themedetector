@@ -15,6 +15,7 @@ use App\Core\View;
 use App\Controllers\AboutController;
 use App\Controllers\HomeController;
 use App\Controllers\LoadingController;
+use App\Controllers\SeoController;
 use PHPUnit\Framework\Attributes\BackupGlobals;
 use PHPUnit\Framework\TestCase;
 
@@ -110,6 +111,11 @@ final class LoadingPageTest extends TestCase
         $container->set(
             LoadingController::class,
             static fn (): LoadingController => new LoadingController(),
+        );
+
+        $container->set(
+            SeoController::class,
+            static fn (): SeoController => new SeoController(),
         );
 
         $router = new Router();

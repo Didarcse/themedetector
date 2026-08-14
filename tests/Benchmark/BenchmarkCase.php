@@ -59,6 +59,11 @@ final readonly class BenchmarkCase
      * @param list<string>         $expectedPlugins    The expected plugin
      *                                                slugs, empty when no
      *                                                plugin is expected.
+     * @param array<string, string> $responses         The offline HTTP
+     *                                                fixture responses keyed
+     *                                                by absolute URL, seeded
+     *                                                into the harness HTTP
+     *                                                client for this case.
      */
     public function __construct(
         private string $name,
@@ -68,6 +73,7 @@ final readonly class BenchmarkCase
         private ?string $expectedTechnology = null,
         private ?string $expectedTheme = null,
         private array $expectedPlugins = [],
+        private array $responses = [],
     ) {
     }
 
@@ -141,5 +147,16 @@ final readonly class BenchmarkCase
     public function expectedPlugins(): array
     {
         return $this->expectedPlugins;
+    }
+
+    /**
+     * Return the offline HTTP fixture responses for this case.
+     *
+     * @return array<string, string> The response bodies keyed by absolute
+     *                               request URL.
+     */
+    public function responses(): array
+    {
+        return $this->responses;
     }
 }

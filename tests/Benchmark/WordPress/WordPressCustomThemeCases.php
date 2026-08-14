@@ -51,6 +51,12 @@ final class WordPressCustomThemeCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'My Agency Theme',
                 expectedPlugins: ['contact-form-7'],
+                responses: [
+                    'https://www.blueprint.studio/wp-content/themes/my-agency-theme/style.css' => "/*\n"
+                        . "Theme Name: My Agency Theme\n"
+                        . "Version: 1.0.0\n"
+                        . "*/",
+                ],
             ),
             new BenchmarkCase(
                 name: 'wordpress.custom-theme.blog',
@@ -72,6 +78,12 @@ final class WordPressCustomThemeCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'My Blog Theme',
                 expectedPlugins: ['akismet'],
+                responses: [
+                    'https://www.dailyramblings.blog/wp-content/themes/my-blog-theme/style.css' => "/*\n"
+                        . "Theme Name: My Blog Theme\n"
+                        . "Version: 1.2.1\n"
+                        . "*/",
+                ],
             ),
             new BenchmarkCase(
                 name: 'wordpress.custom-theme.portfolio',
@@ -93,7 +105,23 @@ final class WordPressCustomThemeCases implements BenchmarkCaseProvider
                 expectedTechnology: 'WordPress',
                 expectedTheme: 'My Portfolio Theme',
                 expectedPlugins: ['wordpress-seo'],
+                responses: [
+                    'https://www.galleryofwork.com/wp-content/themes/my-portfolio-theme/style.css' => "/*\n"
+                        . "Theme Name: My Portfolio Theme\n"
+                        . "Version: 2.0.0\n"
+                        . "*/",
+                ],
             ),
         ];
+    }
+
+    /**
+     * Return the platform this provider covers.
+     *
+     * @return string The platform name.
+     */
+    public function platform(): string
+    {
+        return 'WordPress';
     }
 }
