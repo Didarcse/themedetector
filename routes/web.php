@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Controllers\AboutController;
 use App\Controllers\DetectionController;
 use App\Controllers\HomeController;
 use App\Controllers\LoadingController;
@@ -18,4 +19,4 @@ $router->post('/detect', DetectionController::class);
 
 $router->get('/health', fn () => 'OK');
 
-$router->get('/about', fn () => 'ThemeDetectorTool v2');
+$router->get('/about', AboutController::class);

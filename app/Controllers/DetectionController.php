@@ -46,6 +46,7 @@ final class DetectionController
             'report' => $report,
             'pageTitle' => 'Detection Report',
             'pageDescription' => $url !== '' ? 'Detection report for ' . $url . '.' : 'Website detection report.',
+            'robots' => 'noindex, nofollow',
             'activeNav' => 'home',
         ], 'layouts.app');
     }

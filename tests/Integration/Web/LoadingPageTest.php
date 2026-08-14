@@ -12,6 +12,7 @@ use App\Core\Kernel;
 use App\Core\Request;
 use App\Core\Router;
 use App\Core\View;
+use App\Controllers\AboutController;
 use App\Controllers\HomeController;
 use App\Controllers\LoadingController;
 use PHPUnit\Framework\Attributes\BackupGlobals;
@@ -99,6 +100,11 @@ final class LoadingPageTest extends TestCase
         $container->set(
             HomeController::class,
             static fn (): HomeController => new HomeController(),
+        );
+
+        $container->set(
+            AboutController::class,
+            static fn (): AboutController => new AboutController(),
         );
 
         $container->set(

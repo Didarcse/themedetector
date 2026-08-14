@@ -27,6 +27,8 @@ final class HomeController
             'pageDescription' => 'Enter a website URL to reveal its CMS, theme, theme version, author, and active '
                 . 'plugins. Free website technology detection for WordPress, Shopify, Webflow, Wix, Ghost, '
                 . 'Joomla, Drupal, TYPO3, and Squarespace.',
+            'canonicalUrl' => canonical_url('/'),
+            'ogUrl' => canonical_url('/'),
             'activeNav' => 'home',
         ], 'layouts.app');
     }

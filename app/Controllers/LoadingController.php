@@ -36,6 +36,7 @@ final class LoadingController
             'pageTitle' => 'Analyzing Website',
             'pageDescription' => 'Detecting the CMS, theme, and plugins behind '
                 . ($url !== '' ? $url : 'your website') . '.',
+            'robots' => 'noindex, nofollow',
             'activeNav' => 'home',
         ], 'layouts.app');
     }

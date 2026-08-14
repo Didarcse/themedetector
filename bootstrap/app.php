@@ -9,6 +9,7 @@ use App\Core\ExceptionHandler;
 use App\Core\Kernel;
 use App\Core\Router;
 use App\Core\View;
+use App\Controllers\AboutController;
 use App\Controllers\DetectionController;
 use App\Controllers\HomeController;
 use App\Controllers\LoadingController;
@@ -126,6 +127,11 @@ $container->set(
 $container->set(
     HomeController::class,
     static fn (): HomeController => new HomeController(),
+);
+
+$container->set(
+    AboutController::class,
+    static fn (): AboutController => new AboutController(),
 );
 
 $container->set(

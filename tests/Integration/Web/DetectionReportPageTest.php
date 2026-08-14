@@ -13,6 +13,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
 use App\Core\View;
+use App\Controllers\AboutController;
 use App\Controllers\DetectionController;
 use App\Controllers\HomeController;
 use App\Modules\Detection\Core\DetectionPipeline;
@@ -185,6 +186,20 @@ CSS;
         $this->assertStringNotContainsString('Unknown', $response->content());
     }
 
+    public function test_report_page_is_noindex_and_has_no_canonical(): void
+    {
+        $kernel = $this->kernel(new PageFakeHttpClient(self::HOMEPAGE_HTML, self::STYLESHEET_CSS));
+
+        $response = $kernel->handle(
+            $this->request('POST', '/detect', post: ['url' => 'example.com']),
+        );
+
+        $this->assertSame(200, $response->status());
+        $this->assertStringContainsString('name="robots" content="noindex, nofollow"', $response->content());
+        $this->assertStringNotContainsString('rel="canonical"', $response->content());
+        $this->assertStringNotContainsString('themedetector.test', $response->content());
+    }
+
     /**
      * @param array<string, mixed> $query
      * @param array<string, mixed> $post
@@ -283,6 +298,11 @@ CSS;
         $container->set(
             HomeController::class,
             static fn (): HomeController => new HomeController(),
+        );
+
+        $container->set(
+            AboutController::class,
+            static fn (): AboutController => new AboutController(),
         );
 
         $container->set(

@@ -12,3 +12,8 @@ function app(): Container
 
     return $GLOBALS['app'];
 }
+
+function canonical_url(string $path = '/'): string
+{
+    return 'https://themedetectortool.com' . '/' . ltrim($path, '/');
+}
