@@ -12,7 +12,10 @@ namespace App\Modules\Detection\Drupal\Rules;
  *
  * - The raw HTML source is normalized and searched for a fixed set of
  *   Drupal-specific API endpoint identifiers using simple string matching
- *   only.
+ *   only. Only endpoints that are distinctive to Drupal are considered;
+ *   generic path tokens that commonly occur on unrelated applications
+ *   (such as /node/, /entity/, or /user/login) are deliberately not
+ *   treated as evidence.
  * - The comparison is case-insensitive and the first matching endpoint
  *   wins; the matched endpoint is recorded in the metadata.
  *
@@ -32,9 +35,6 @@ final readonly class ApiEndpointRule implements RuleInterface
 
     private const ENDPOINTS = [
         '/jsonapi/',
-        '/entity/',
-        '/node/',
-        '/user/login',
     ];
 
     /**

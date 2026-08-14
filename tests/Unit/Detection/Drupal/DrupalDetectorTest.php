@@ -8,7 +8,9 @@ use App\Modules\Detection\DetectionContext;
 use App\Modules\Detection\DetectionResult;
 use App\Modules\Detection\Drupal\ConfidenceCalculator;
 use App\Modules\Detection\Drupal\DrupalDetector;
+use App\Modules\Detection\Drupal\Rules\ApiEndpointRule;
 use App\Modules\Detection\Drupal\Rules\AssetPathRule;
+use App\Modules\Detection\Drupal\Rules\HtmlSignatureRule;
 use App\Modules\Detection\Drupal\Rules\MetaGeneratorRule;
 use App\Modules\Detection\Drupal\Rules\RuleInterface;
 use App\Modules\Detection\Drupal\Rules\ScriptFingerprintRule;
@@ -200,6 +202,28 @@ final class DrupalDetectorTest extends TestCase
             new MetaGeneratorRule(),
             new ScriptFingerprintRule(),
             new AssetPathRule(),
+        ]);
+        $result = $detector->detect($this->createContext($html));
+
+        self::assertFalse($result->isDetected());
+        self::assertSame(0, $result->confidence());
+        self::assertSame([], $result->metadata());
+    }
+
+    public function test_does_not_detect_generic_path_tokens_only(): void
+    {
+        $html = '<!DOCTYPE html><html><body>'
+            . '<nav><a href="/node/42">product</a></nav>'
+            . '<a href="/entity/customer/5">edit</a>'
+            . '<form action="/user/login"><input name="u"></form>'
+            . '</body></html>';
+
+        $detector = $this->createDetector([
+            new MetaGeneratorRule(),
+            new ScriptFingerprintRule(),
+            new AssetPathRule(),
+            new HtmlSignatureRule(),
+            new ApiEndpointRule(),
         ]);
         $result = $detector->detect($this->createContext($html));
 
