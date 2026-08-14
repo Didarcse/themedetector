@@ -17,6 +17,7 @@ final class Request
     private readonly array $post;
     /** @var array<string, mixed> */
     private readonly array $server;
+    private readonly string $body;
 
     /**
      * @param array<string, mixed> $query
@@ -29,12 +30,14 @@ final class Request
         array $query = [],
         array $post = [],
         array $server = [],
+        string $body = '',
     ) {
         $this->method = strtoupper($method);
         $this->uri = '/' . ltrim(trim($uri), '/');
         $this->query = $query;
         $this->post = $post;
         $this->server = $server;
+        $this->body = $body;
     }
 
     public function method(): string
@@ -65,6 +68,17 @@ final class Request
         return $this->server;
     }
 
+    /**
+     * Return the raw request body.
+     *
+     * @return string The raw request body, empty when the request carried
+     *                no body.
+     */
+    public function body(): string
+    {
+        return $this->body;
+    }
+
     public static function fromGlobals(): self
     {
         $method = self::stringValue($_SERVER['REQUEST_METHOD'] ?? null) ?? 'GET';
@@ -75,12 +89,15 @@ final class Request
             $uri = '/';
         }
 
+        $body = self::stringValue(file_get_contents('php://input')) ?? '';
+
         return new self(
             $method,
             $uri,
             self::superglobal($_GET),
             self::superglobal($_POST),
             self::superglobal($_SERVER),
+            $body,
         );
     }
 

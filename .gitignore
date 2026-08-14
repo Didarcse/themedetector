@@ -24,6 +24,9 @@ Thumbs.db
 /storage/cache/*
 /storage/phpstan/
 
+# API runtime state (rate-limit counters, workload guard)
+/storage/api/*
+
 # Uploads
 /storage/uploads/*
 !storage/uploads/.gitkeep
