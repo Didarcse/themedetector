@@ -105,27 +105,31 @@ final readonly class NativeCurlAdapter implements CurlAdapterInterface
      * Build the immutable set of cURL options for a GET request.
      *
      * The option set is fixed and safe: timeouts are bounded, redirects
-     * are followed to a strict maximum, SSL verification is enabled, and
-     * all supported content encodings are accepted.
+     * are followed to a strict maximum, the allowed protocols are
+     * restricted to HTTP and HTTPS for both the initial request and any
+     * redirects, SSL verification is enabled, and all supported content
+     * encodings are accepted.
      *
      * @return array<int, mixed>
      */
     private function options(string $url, int $timeout, string $userAgent): array
     {
         return [
-            CURLOPT_URL            => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER         => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS      => 10,
-            CURLOPT_TIMEOUT        => $timeout,
-            CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_USERAGENT      => $userAgent,
-            CURLOPT_HTTPGET        => true,
-            CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
-            CURLOPT_ENCODING       => '',
+            CURLOPT_URL             => $url,
+            CURLOPT_RETURNTRANSFER  => true,
+            CURLOPT_HEADER          => true,
+            CURLOPT_FOLLOWLOCATION  => true,
+            CURLOPT_MAXREDIRS       => 10,
+            CURLOPT_TIMEOUT         => $timeout,
+            CURLOPT_CONNECTTIMEOUT  => 5,
+            CURLOPT_USERAGENT       => $userAgent,
+            CURLOPT_HTTPGET         => true,
+            CURLOPT_HTTP_VERSION    => CURL_HTTP_VERSION_1_1,
+            CURLOPT_SSL_VERIFYPEER  => true,
+            CURLOPT_SSL_VERIFYHOST  => 2,
+            CURLOPT_PROTOCOLS       => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_ENCODING        => '',
         ];
     }
 

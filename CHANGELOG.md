@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-14
+
+### Added
+
+#### Detection Report Workflow
+
+- Complete end-to-end detection report workflow: homepage URL submission,
+  loading/progress page, and a structured Detection Report page rendered
+  through the shared layout system.
+- `POST /detect` report endpoint, `GET /loading` flow, and `GET /health`
+  health check route.
+- Immutable domain `DetectionReport` and `DetectionReportViewModel`
+  assembled by `WebsiteReportAnalyzer` (URL normalization, transport,
+  detection, theme extraction, and plugin detection orchestration).
+- In-memory detection: no results are stored and no account is required.
+
+#### Shared Layout System
+
+- Bootstrap 5.3 shared layout with SEO metadata (canonical, Open Graph,
+  Twitter Cards, robots), semantic partials (navbar, footer, hero,
+  FAQ schema), and responsive report/plugin cards.
+- Copy-report action and "coming soon" placeholders for PDF export and API
+  access.
+
+#### Plugin Detection Engine
+
+- WordPress plugin CSS asset rule and expanded plugin detection test
+  coverage.
+
+#### Benchmark Framework
+
+- Manual detection benchmark runners under `tests/Benchmark/` covering
+  WordPress, Shopify, Webflow, and Wix cases.
+
+### Changed
+
+- Improved WordPress theme stylesheet detection accuracy.
+- Improved Detection Report presentation and UX (confidence scores,
+  detection summary, empty states, error handling).
+- Hardened detection transport and fingerprint handling.
+
+### Fixed
+
+- Hardened Drupal and TYPO3 detection fingerprints against false positives.
+- Hardened Drupal API endpoint detection.
+- Cross-CMS false-positive hardening for Joomla, Shopify, Wix, Ghost, and
+  Squarespace: removed generic fingerprints (bare path segments, generic
+  asset filenames, generic JavaScript idioms) that matched non-CMS content,
+  keeping only platform-distinctive signals.
+
+### Quality Gates
+
+- PHPUnit 11: 793 tests, 1546 assertions passing.
+- PHPStan Level MAX: 0 errors.
+- PHP_CodeSniffer PSR-12: 0 errors.
+- Composer audit: 0 security advisories.
+
 ## [0.1.0] - 2026-08-05
 
 ### Added
@@ -84,5 +141,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/WebsiteAnalysisArchitecture.md`,
   `docs/WebsiteIntelligenceEngineArchitecture.md`).
 
-[Unreleased]: https://github.com/Didarcse/themedetector/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Didarcse/themedetector/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/Didarcse/themedetector/compare/v0.1.0...v2.0.0
 [0.1.0]: https://github.com/Didarcse/themedetector/releases/tag/v0.1.0

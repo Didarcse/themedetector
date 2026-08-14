@@ -37,6 +37,8 @@ final class CurlFactory
             CURLOPT_HTTP_VERSION    => CURL_HTTP_VERSION_2TLS,
             CURLOPT_SSL_VERIFYPEER  => true,
             CURLOPT_SSL_VERIFYHOST  => 2,
+            CURLOPT_PROTOCOLS       => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
             CURLOPT_USERAGENT       => UserAgent::random(),
             CURLOPT_HEADER          => true,
             CURLOPT_FAILONERROR     => false,

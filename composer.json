@@ -2,7 +2,7 @@
     "name": "globalkernel/themedetector-tool",
     "description": "ThemeDetectorTool v2 - Theme detection and analysis platform built on Kernel Framework v1",
     "type": "project",
-    "license": "proprietary",
+    "license": "MIT",
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {

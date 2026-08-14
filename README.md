@@ -7,7 +7,7 @@
 **Package:** `globalkernel/themedetector-tool`  
 **Framework:** Kernel Framework v1  
 **PHP:** 8.2+  
-**License:** MIT (placeholder — see `LICENSE`)
+**License:** MIT (see `LICENSE`)
 
 ---
 
@@ -43,7 +43,7 @@ stages.
 - **Facade-first public API** — every module exposes a single public facade
   (`WebsiteDetector`, `ThemeExtractionManager`, `PluginDetectionManager`, ...).
 - **Quality gates** — PHP 8.2, `declare(strict_types=1)`, PSR-12, PHPStan Level MAX,
-  PHPUnit 11 (729 tests, 1310 assertions).
+  PHPUnit 11 (793 tests, 1546 assertions).
 
 ## Requirements
 
@@ -70,16 +70,17 @@ php -r "echo bin2hex(random_bytes(32));"
 # Paste the output into APP_KEY in .env
 ```
 
-> The application runs with zero configuration in development. Set `APP_ENV`,
-> `APP_DEBUG`, `APP_URL`, and the `DB_*` values in `.env` when wiring real
-> infrastructure.
+> The application runs with zero configuration in development — the Kernel v1
+> framework is configuration-less and does not read `.env`. `.env.example` is
+> provided as a reference for future infrastructure wiring only; `APP_KEY` is
+> not required to run the application.
 
 ## Directory Structure
 
 ```
 themedetector/
 ├── app/                        # Application layer
-│   ├── Controllers/            # HTTP controllers (placeholder shells)
+│   ├── Controllers/            # HTTP controllers (Home, Loading, Detection)
 │   ├── Core/                   # Kernel Framework v1
 │   │   ├── Contracts/          # Framework contracts (ServiceProviderInterface, ...)
 │   │   ├── Providers/          # Service providers
@@ -127,8 +128,58 @@ php -S localhost:8000 -t public/
 ```
 
 Open <http://localhost:8000>. The web entry point (`public/index.php`) boots the
-Kernel and dispatches `routes/web.php`; the current controllers and views are
-placeholder shells awaiting the analysis UI.
+Kernel and dispatches `routes/web.php`: the homepage accepts a website URL, the
+loading page runs the client-side progress flow, and the report page shows the
+detected CMS, theme, and plugins with confidence scores.
+
+## Deployment
+
+The web server **document root must point to `public/`**. The application entry
+point is `public/index.php`; everything outside `public/` (application code,
+config, tests, storage) must not be web-accessible.
+
+- **Apache** — the repository ships `public/.htaccess`, which enables
+  `mod_rewrite` front-controller routing: requests that are not existing files
+  or directories are rewritten to `index.php`. Configure
+  `DocumentRoot /path/to/themedetector/public` with `AllowOverride All`
+  (or import the equivalent `<Directory>` directives).
+- **Nginx** — point `root` at the `public/` directory and route all non-file
+  requests to the front controller, e.g.:
+
+  ```nginx
+  root /path/to/themedetector/public;
+
+  location / {
+      try_files $uri $uri/ /index.php?$query_string;
+  }
+
+  location ~ \.php$ {
+      include fastcgi_params;
+      fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+      fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+  }
+  ```
+
+- **Permissions** — `storage/` must be writable by the web server user for
+  application logs.
+- **Requirements** — PHP 8.2+, `ext-curl`, `ext-json`, and Composer 2.x.
+
+## Known Limitations
+
+- **Blocked or protected websites.** Sites behind a WAF, geo/bot protection, or
+  that refuse automated HTTP requests return a `transport_failure` error report.
+  Detection is limited to what a single public HTTP GET can observe.
+- **Inaccessible theme stylesheet.** Theme extraction requires the canonical
+  stylesheet (`style.css` on WordPress); when it cannot be fetched, the theme is
+  reported as not detected even when the CMS is identified.
+- **Intentionally conservative fingerprints.** Fingerprints favour precision
+  over recall: generic patterns (path segments like `/templates/`, asset names
+  like `theme.css`) are deliberately excluded, so heavily customised sites or
+  sites built with generic frameworks may not be detected.
+- **URL scheme.** A missing scheme is inferred as HTTPS; HTTP URLs must be
+  entered explicitly. Redirects are followed up to a maximum of 10.
+- **Not yet shipped.** PDF export and public REST API access are planned but not
+  yet available.
 
 ## Running PHPUnit
 
@@ -142,7 +193,7 @@ vendor/bin/phpunit --testsuite tests
 
 `phpunit.xml` is strict: the suite fails on warnings, notices, deprecations, risky
 tests, unexpected global state, and unexpected output. Current status:
-**OK (729 tests, 1310 assertions)**. Benchmark classes live in `tests/Benchmark/`
+**OK (793 tests, 1546 assertions)**. Benchmark classes live in `tests/Benchmark/`
 and are deliberately **not** part of the PHPUnit suites — run them manually with
 `php tests/Benchmark/<file>.php`.
 
