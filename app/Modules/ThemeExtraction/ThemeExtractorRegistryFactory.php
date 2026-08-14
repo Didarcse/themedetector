@@ -6,6 +6,10 @@ namespace App\Modules\ThemeExtraction;
 
 use App\Core\Container;
 use App\Modules\Http\HttpClientInterface;
+use App\Modules\ThemeExtraction\Shopify\ShopifyThemeExtractor;
+use App\Modules\ThemeExtraction\Shopify\ShopifyThemeLocator;
+use App\Modules\ThemeExtraction\Shopify\ShopifyThemeMetadataMapper;
+use App\Modules\ThemeExtraction\Shopify\ShopifyThemeParser;
 use App\Modules\ThemeExtraction\WordPress\WordPressStyleCssDownloader;
 use App\Modules\ThemeExtraction\WordPress\WordPressStyleCssLocator;
 use App\Modules\ThemeExtraction\WordPress\WordPressStyleCssParser;
@@ -58,6 +62,11 @@ final readonly class ThemeExtractorRegistryFactory
                 new WordPressStyleCssDownloader($httpClient),
                 new WordPressStyleCssParser(),
                 new WordPressThemeMetadataMapper(),
+            ),
+            new ShopifyThemeExtractor(
+                new ShopifyThemeLocator(),
+                new ShopifyThemeParser(),
+                new ShopifyThemeMetadataMapper(),
             ),
         ]);
     }

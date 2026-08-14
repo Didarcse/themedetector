@@ -15,7 +15,10 @@ use Tests\Benchmark\Contracts\BenchmarkCaseProvider;
  * standard theme asset filenames, and the window.Shopify JavaScript global
  * so the detection engines can be measured against a realistic Shopify
  * page. Shopify store themes are not reported by the CMS detection engine,
- * so no theme is expected.
+ * but the window.Shopify global exposes the active theme name; the
+ * electronics case carries a theme object and expects the theme name
+ * Dawn, while the fashion case carries no theme evidence and expects no
+ * theme.
  *
  * Design philosophy:
  *
@@ -71,12 +74,13 @@ final class ShopifyBenchmarkCases implements BenchmarkCaseProvider
                     . '    <script src="https://cdn.shopify.com/s/files/1/0009/8765/t/8/assets/global.js"></script>' . "\n"
                     . '</head>' . "\n"
                     . '<body>' . "\n"
-                    . '    <script>window.Shopify = window.Shopify || { theme: { id: 8 } };</script>' . "\n"
+                    . '    <script>window.Shopify = { theme: { id: 8, name: "Dawn", role: "main" },' . "\n"
+                    . '      routes: { root: "/" } };</script>' . "\n"
                     . '    <main><h1>Gadgets and more</h1></main>' . "\n"
                     . '</body>' . "\n"
                     . '</html>',
                 expectedTechnology: 'Shopify',
-                expectedTheme: null,
+                expectedTheme: 'Dawn',
                 expectedPlugins: [],
             ),
         ];
