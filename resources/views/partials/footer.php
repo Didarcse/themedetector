@@ -13,11 +13,8 @@
             <div class="col-6 col-lg-3">
                 <h2 class="h6 text-white fw-semibold mb-3">Quick Links</h2>
                 <ul class="list-unstyled mb-0">
-                    <li class="mb-2"><a href="/docs">Documentation</a></li>
-                    <li class="mb-2"><a href="/api">API</a></li>
-                    <li class="mb-2"><a href="/blog">Blog</a></li>
-                    <li>
-                        <a href="https://github.com/globalkernel/themedetector-tool" target="_blank" rel="noopener">GitHub</a>
+                    <li class="mb-2">
+                        <a href="https://github.com/Didarcse/themedetector" target="_blank" rel="noopener">GitHub</a>
                     </li>
                 </ul>
             </div>

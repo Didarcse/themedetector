@@ -37,27 +37,6 @@ $detectHref = $activeNav === 'home' || $activeNav === 'detector' ? '#detect' : '
                 </li>
                 <li class="nav-item">
                     <a
-                        class="nav-link<?= $activeNav === 'blog' ? ' active' : '' ?>"
-                        href="/blog"
-                        <?= $activeNav === 'blog' ? 'aria-current="page"' : '' ?>
-                    >Blog</a>
-                </li>
-                <li class="nav-item">
-                    <a
-                        class="nav-link<?= $activeNav === 'api' ? ' active' : '' ?>"
-                        href="/api"
-                        <?= $activeNav === 'api' ? 'aria-current="page"' : '' ?>
-                    >API</a>
-                </li>
-                <li class="nav-item">
-                    <a
-                        class="nav-link<?= $activeNav === 'docs' ? ' active' : '' ?>"
-                        href="/docs"
-                        <?= $activeNav === 'docs' ? 'aria-current="page"' : '' ?>
-                    >Documentation</a>
-                </li>
-                <li class="nav-item">
-                    <a
                         class="nav-link<?= $activeNav === 'about' ? ' active' : '' ?>"
                         href="/about"
                         <?= $activeNav === 'about' ? 'aria-current="page"' : '' ?>
@@ -66,7 +45,7 @@ $detectHref = $activeNav === 'home' || $activeNav === 'detector' ? '#detect' : '
                 <li class="nav-item">
                     <a
                         class="nav-link"
-                        href="https://github.com/globalkernel/themedetector-tool"
+                        href="https://github.com/Didarcse/themedetector"
                         target="_blank"
                         rel="noopener"
                     >GitHub <i class="bi bi-box-arrow-up-right small ms-1" aria-hidden="true"></i></a>

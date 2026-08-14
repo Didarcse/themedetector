@@ -1,6 +1,5 @@
 # Dependencies
 /vendor/
-composer.lock
 
 # Environment
 .env
@@ -37,6 +36,10 @@ Thumbs.db
 
 # Static analysis
 /phpstan.neon
+/phpstan-errors.txt
+
+# Generated project snapshots
+/project-tree.txt
 
 # Build
 /build/
