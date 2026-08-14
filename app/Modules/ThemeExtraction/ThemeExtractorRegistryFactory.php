@@ -5,7 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\ThemeExtraction;
 
 use App\Core\Container;
+use App\Modules\Detection\Joomla\Rules\MetaGeneratorRule;
+use App\Modules\Detection\Joomla\Rules\ScriptFingerprintRule;
 use App\Modules\Http\HttpClientInterface;
+use App\Modules\ThemeExtraction\Joomla\JoomlaContextGate;
+use App\Modules\ThemeExtraction\Joomla\JoomlaTemplateLocator;
+use App\Modules\ThemeExtraction\Joomla\JoomlaThemeExtractor;
+use App\Modules\ThemeExtraction\Joomla\JoomlaThemeMetadataMapper;
 use App\Modules\ThemeExtraction\Shopify\ShopifyThemeExtractor;
 use App\Modules\ThemeExtraction\Shopify\ShopifyThemeLocator;
 use App\Modules\ThemeExtraction\Shopify\ShopifyThemeMetadataMapper;
@@ -67,6 +73,14 @@ final readonly class ThemeExtractorRegistryFactory
                 new ShopifyThemeLocator(),
                 new ShopifyThemeParser(),
                 new ShopifyThemeMetadataMapper(),
+            ),
+            new JoomlaThemeExtractor(
+                new JoomlaContextGate(
+                    new MetaGeneratorRule(),
+                    new ScriptFingerprintRule(),
+                ),
+                new JoomlaTemplateLocator(),
+                new JoomlaThemeMetadataMapper(),
             ),
         ]);
     }

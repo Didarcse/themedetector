@@ -15,13 +15,16 @@ use Tests\Benchmark\Contracts\BenchmarkCaseProvider;
  * tag, qualified /media/ asset paths, Joomla HTML signatures, and the
  * window.Joomla JavaScript globals. Negative cases carry realistic generic
  * markup whose paths and text must never be mistaken for Joomla evidence.
- * Joomla themes are not reported by the CMS detection engine, so no theme
- * is expected.
+ * Joomla themes are not reported by the CMS detection engine; the theme
+ * extraction engine reports the active template directory name located
+ * from a root-anchored /templates/{slug}/ path. The resort case carries
+ * such a path and expects the template cassiopeia, while every other case
+ * carries no template evidence and expects no theme.
  *
  * Design philosophy:
  *
  * - Each case is a self-contained, offline HTML fixture: no HTTP.
- * - Ground truth is explicit: the expected CMS, and empty theme and plugin
+ * - Ground truth is explicit: the expected CMS, theme, and empty plugin
  *   sets.
  * - Stateless, deterministic, and side-effect free.
  */
@@ -46,6 +49,7 @@ final class JoomlaBenchmarkCases implements BenchmarkCaseProvider
                     . '    <title>Aqua Terrace Resort</title>' . "\n"
                     . '    <meta name="generator" content="Joomla! - Open Source '
                     . 'Content Management - Version 5.1.0">' . "\n"
+                    . '    <link rel="stylesheet" href="/templates/cassiopeia/css/template.css">' . "\n"
                     . '    <script src="/media/system/js/core.js"></script>' . "\n"
                     . '    <script src="/media/system/js/mootools-core.js"></script>' . "\n"
                     . '</head>' . "\n"
@@ -62,7 +66,7 @@ final class JoomlaBenchmarkCases implements BenchmarkCaseProvider
                     . '</body>' . "\n"
                     . '</html>',
                 expectedTechnology: 'Joomla',
-                expectedTheme: null,
+                expectedTheme: 'cassiopeia',
                 expectedPlugins: [],
             ),
             new BenchmarkCase(
