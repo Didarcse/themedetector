@@ -17,8 +17,9 @@ use PHPUnit\Framework\TestCase;
  * order, string contents and nested braces never break the balance, the
  * guard idiom `window.Shopify = window.Shopify || { ... }` is ignored,
  * external and structured-data scripts are skipped, objects outside script
- * blocks are ignored, unbalanced objects are skipped, empty HTML yields an
- * empty list, and locating is deterministic across repeated calls.
+ * blocks are ignored, unrelated window.theme assignments are ignored,
+ * unbalanced objects are skipped, empty HTML yields an empty list, and
+ * locating is deterministic across repeated calls.
  *
  * The tests are behaviour-driven, fast, independent, and deterministic.
  * They use only real objects — a real ShopifyThemeLocator and a real
@@ -148,6 +149,22 @@ final class ShopifyThemeLocatorTest extends TestCase
     public function test_locate_ignores_object_outside_script(): void
     {
         $html = '<html><body><div>window.Shopify = { theme: { name: "Dawn" } };</div></body></html>';
+
+        self::assertSame([], $this->locator()->locate($this->context($html)));
+    }
+
+    /**
+     * Verify that an unrelated window.theme object is ignored.
+     *
+     * Only the canonical window.Shopify assignment is theme evidence; a
+     * plain window.theme object belongs to some other script and must not
+     * be treated as a Shopify theme.
+     */
+    public function test_locate_ignores_unrelated_window_theme(): void
+    {
+        $html = '<html><body>'
+            . '<script>window.theme = { name: "Dawn", role: "main" };</script>'
+            . '</body></html>';
 
         self::assertSame([], $this->locator()->locate($this->context($html)));
     }

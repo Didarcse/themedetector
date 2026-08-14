@@ -14,8 +14,8 @@ use PHPUnit\Framework\TestCase;
  * Verifies the complete public contract of the locator: a root-anchored
  * /templates/{slug}/ path in a resource attribute yields the template
  * directory name, stylesheet links are scanned before every other
- * resource, the first qualifying path wins, absolute and query-string
- * URLs and URL-encoded slugs are handled, and every non-qualifying path —
+ * resource, the first qualifying path wins, absolute URLs with query
+ * strings and fragments and URL-encoded slugs are handled, and every non-qualifying path —
  * bare /templates/, generic directory names such as css and js, the
  * singular /template/, non-root paths such as /assets/templates/, plain
  * text, CSS class names, and unparseable URLs — is ignored.
@@ -151,6 +151,18 @@ final class JoomlaTemplateLocatorTest extends TestCase
     {
         $html = '<html><head>'
             . '<link rel="stylesheet" href="https://example.com/templates/cassiopeia/css/template.css?v=123">'
+            . '</head><body></body></html>';
+
+        self::assertSame('cassiopeia', $this->locator()->locate($this->context($html)));
+    }
+
+    /**
+     * Verify that an absolute URL with a fragment is handled.
+     */
+    public function test_locate_handles_absolute_url_with_fragment(): void
+    {
+        $html = '<html><head>'
+            . '<link rel="stylesheet" href="https://example.com/templates/cassiopeia/css/template.css#main">'
             . '</head><body></body></html>';
 
         self::assertSame('cassiopeia', $this->locator()->locate($this->context($html)));

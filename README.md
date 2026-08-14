@@ -36,14 +36,34 @@ stages.
   immutable results.
 - **Supported platforms** — WordPress, Shopify, Wix, Squarespace, Joomla, Drupal,
   Ghost, TYPO3, Webflow.
-- **Theme Extraction Engine** — extracts active theme metadata, WordPress-first.
+- **Theme Extraction Engine** — extracts active theme metadata for WordPress,
+  Shopify, Joomla, and Drupal.
 - **Plugin Detection Engine** — enterprise-grade WordPress plugin detection.
 - **Detection Pipeline** — orchestrates detection stages via pipeline stage
   contracts.
 - **Facade-first public API** — every module exposes a single public facade
   (`WebsiteDetector`, `ThemeExtractionManager`, `PluginDetectionManager`, ...).
 - **Quality gates** — PHP 8.2, `declare(strict_types=1)`, PSR-12, PHPStan Level MAX,
-  PHPUnit 11 (793 tests, 1546 assertions).
+  PHPUnit 11 (974 tests, 1923 assertions).
+
+## Theme Extraction Support
+
+The **Theme Extraction Engine** extracts active-theme metadata only where a
+reliable, page-level identity exists. It never guesses: when no trustworthy
+evidence is found, the theme is reported as not extracted (no name, no
+fabricated version or author).
+
+| Platform      | Theme extraction      | Why |
+| ------------- | --------------------- | --- |
+| WordPress     | Supported             | Canonical `style.css` header is fetched and parsed. |
+| Shopify       | Supported             | `window.Shopify.theme` carries the theme name on every page. |
+| Joomla        | Supported             | The active template is exposed as `/templates/{slug}/` (gated by Joomla evidence). |
+| Drupal        | Supported             | The active theme is exposed as `/themes/{contrib\|custom}/{slug}/` (gated by Drupal evidence). |
+| Ghost         | Not supported         | Theme identity exists only in the admin area, not in the public page. |
+| TYPO3         | Not supported         | Public asset paths expose extensions (`/typo3conf/ext/`), not the active sitepackage theme. |
+| Squarespace   | Not supported         | Pages expose only an opaque template id with no offline name mapping; v7.1 has no theme at all. |
+| Wix           | No theme concept      | Sites are assembled from an opaque cloud builder; the served HTML carries no theme identity. |
+| Webflow       | No theme concept      | Every site is a bespoke published artifact with no theme identity in the served HTML. |
 
 ## Requirements
 
@@ -173,9 +193,9 @@ config, tests, storage) must not be web-accessible.
   stylesheet (`style.css` on WordPress); when it cannot be fetched, the theme is
   reported as not detected even when the CMS is identified.
 - **Intentionally conservative fingerprints.** Fingerprints favour precision
-  over recall: generic patterns (path segments like `/templates/`, asset names
-  like `theme.css`) are deliberately excluded, so heavily customised sites or
-  sites built with generic frameworks may not be detected.
+  over recall: generic patterns (bare path segments like `/templates/`, asset
+  names like `theme.css`) are deliberately excluded, so heavily customised
+  sites or sites built with generic frameworks may not be detected.
 - **URL scheme.** A missing scheme is inferred as HTTPS; HTTP URLs must be
   entered explicitly. Redirects are followed up to a maximum of 10.
 - **Not yet shipped.** PDF export and public REST API access are planned but not
@@ -193,7 +213,7 @@ vendor/bin/phpunit --testsuite tests
 
 `phpunit.xml` is strict: the suite fails on warnings, notices, deprecations, risky
 tests, unexpected global state, and unexpected output. Current status:
-**OK (793 tests, 1546 assertions)**. Benchmark classes live in `tests/Benchmark/`
+**OK (974 tests, 1923 assertions)**. Benchmark classes live in `tests/Benchmark/`
 and are deliberately **not** part of the PHPUnit suites — run them manually with
 `php tests/Benchmark/<file>.php`.
 

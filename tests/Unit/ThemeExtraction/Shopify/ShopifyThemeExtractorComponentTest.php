@@ -183,6 +183,71 @@ final class ShopifyThemeExtractorComponentTest extends TestCase
     }
 
     /**
+     * Verify that an empty theme name yields a failed result.
+     *
+     * The mapper normalizes an empty name to the empty string, and the
+     * extractor must never surface an empty name as an extracted theme, so
+     * the pipeline short-circuits into a failed result.
+     */
+    public function test_returns_failed_result_when_theme_name_is_empty(): void
+    {
+        $html = '<html><body>'
+            . '<script>window.Shopify = { theme: { id: 8, name: "", role: "main" } };</script>'
+            . '</body></html>';
+
+        $result = $this->extractor()->extract($this->context($html));
+
+        self::assertFalse($result->isExtracted());
+        self::assertNull($result->theme());
+        self::assertSame(0, $result->confidence());
+    }
+
+    /**
+     * Verify that generic theme asset names yield a failed result.
+     *
+     * Generic asset names such as theme.css and theme.js are deliberately
+     * excluded as evidence: they appear on countless non-Shopify sites and
+     * carry no window.Shopify theme object.
+     */
+    public function test_returns_failed_result_for_generic_theme_assets(): void
+    {
+        $html = '<html><head>'
+            . '<link rel="stylesheet" href="/theme.css">'
+            . '</head><body>'
+            . '<script src="/theme.js"></script>'
+            . '</body></html>';
+
+        $result = $this->extractor()->extract($this->context($html));
+
+        self::assertFalse($result->isExtracted());
+        self::assertNull($result->theme());
+        self::assertSame(0, $result->confidence());
+    }
+
+    /**
+     * Verify that Shopify asset paths without a theme object yield a failed
+     * result.
+     *
+     * base.css and global.js are standard Online Store 2.0 asset names, but
+     * without a window.Shopify object carrying a valid theme name they are
+     * not theme evidence.
+     */
+    public function test_returns_failed_result_for_assets_without_theme_object(): void
+    {
+        $html = '<html><head>'
+            . '<link rel="stylesheet" href="https://cdn.shopify.com/s/files/1/9/t/8/assets/base.css?v=456">'
+            . '</head><body>'
+            . '<script src="https://cdn.shopify.com/s/files/1/9/t/8/assets/global.js"></script>'
+            . '</body></html>';
+
+        $result = $this->extractor()->extract($this->context($html));
+
+        self::assertFalse($result->isExtracted());
+        self::assertNull($result->theme());
+        self::assertSame(0, $result->confidence());
+    }
+
+    /**
      * Verify that the successful pipeline maps the theme metadata.
      */
     public function test_successful_pipeline_maps_theme_metadata(): void

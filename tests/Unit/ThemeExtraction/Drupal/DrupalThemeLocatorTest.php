@@ -15,7 +15,8 @@ use PHPUnit\Framework\TestCase;
  * /themes/contrib/{slug}/ or /themes/custom/{slug}/ path in a resource
  * attribute yields the theme directory name, stylesheet links are scanned
  * before every other resource, the first qualifying path wins, absolute
- * and query-string URLs and URL-encoded slugs are handled, and every
+ * URLs with query strings and fragments and URL-encoded slugs are handled,
+ * and every
  * non-qualifying path — bare /themes/, /themes/contrib/ and /themes/custom/
  * without a slug, a generic first segment, the singular /theme/, non-root
  * paths such as /assets/themes/ and /wp-content/themes/, generic directory
@@ -167,6 +168,18 @@ final class DrupalThemeLocatorTest extends TestCase
     {
         $html = '<html><head>'
             . '<link rel="stylesheet" href="https://example.com/themes/custom/newsroom/css/main.css?v=123">'
+            . '</head><body></body></html>';
+
+        self::assertSame('newsroom', $this->locator()->locate($this->context($html)));
+    }
+
+    /**
+     * Verify that an absolute URL with a fragment is handled.
+     */
+    public function test_locate_handles_absolute_url_with_fragment(): void
+    {
+        $html = '<html><head>'
+            . '<link rel="stylesheet" href="https://example.com/themes/custom/newsroom/css/main.css#main">'
             . '</head><body></body></html>';
 
         self::assertSame('newsroom', $this->locator()->locate($this->context($html)));
