@@ -11,6 +11,8 @@ use App\Modules\Detection\Wix\Rules\AssetPathRule;
 use App\Modules\Detection\Wix\Rules\GlobalJsRule;
 use App\Modules\Detection\Wix\Rules\MetaGeneratorRule;
 use App\Modules\Detection\Wix\Rules\RuleInterface;
+use App\Modules\Detection\Wix\Rules\ThunderboltRule;
+use App\Modules\Detection\Wix\Rules\ViewerModelRule;
 use App\Modules\Detection\Wix\WixDetector;
 use PHPUnit\Framework\TestCase;
 
@@ -186,6 +188,25 @@ final class WixDetectorTest extends TestCase
 
         self::assertSame(['MetaGeneratorRule'], $result->metadata()['matched_rules']);
         self::assertArrayHasKey('generator', $result->metadata());
+    }
+
+    public function test_does_not_detect_generic_web_technologies_page(): void
+    {
+        $html = '<html><body>'
+            . '<article>Compare Thunderbolt 4 and USB4 connections.</article>'
+            . '<script>window.__INITIAL_STATE__ = {"user": null};</script>'
+            . '<script>var viewerModel = new Viewer3D();</script>'
+            . '</body></html>';
+
+        $detector = $this->createDetector([
+            new ThunderboltRule(),
+            new GlobalJsRule(),
+            new ViewerModelRule(),
+        ]);
+        $result = $detector->detect($this->createContext($html));
+
+        self::assertFalse($result->isDetected());
+        self::assertSame(0, $result->confidence());
     }
 
     public function test_returns_detection_result(): void

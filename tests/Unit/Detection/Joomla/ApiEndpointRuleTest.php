@@ -46,15 +46,12 @@ final class ApiEndpointRuleTest extends TestCase
         );
     }
 
-    public function test_detects_api_directory(): void
+    public function test_does_not_detect_generic_api_directory(): void
     {
         $result = $this->evaluate('<a href="/api/users"></a>');
 
-        self::assertTrue($result['matched']);
-        self::assertSame(
-            ['api_endpoint' => '/api/'],
-            $result['metadata'],
-        );
+        self::assertFalse($result['matched']);
+        self::assertSame([], $result['metadata']);
     }
 
     public function test_detects_case_insensitively(): void

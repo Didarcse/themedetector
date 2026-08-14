@@ -35,15 +35,12 @@ final class DataAttributesRuleTest extends TestCase
         );
     }
 
-    public function test_detects_data_section_id_attribute(): void
+    public function test_does_not_detect_generic_data_section_id_attribute(): void
     {
         $result = $this->evaluate('<section data-section-id="abc123"></section>');
 
-        self::assertTrue($result['matched']);
-        self::assertSame(
-            ['sq_attribute' => 'data-section-id'],
-            $result['metadata'],
-        );
+        self::assertFalse($result['matched']);
+        self::assertSame([], $result['metadata']);
     }
 
     public function test_detects_data_current_styles_attribute(): void
@@ -60,7 +57,7 @@ final class DataAttributesRuleTest extends TestCase
     public function test_returns_first_matching_attribute(): void
     {
         $result = $this->evaluate(
-            '<div data-animation-role="hero" data-section-id="abc"></div>'
+            '<div data-animation-role="hero" data-current-styles="{}"></div>'
         );
 
         self::assertTrue($result['matched']);

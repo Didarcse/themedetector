@@ -46,7 +46,7 @@ final class ShopifyBenchmarkCases implements BenchmarkCaseProvider
                     . '    <link rel="stylesheet" href="https://cdn.shopify.com/s/files/1/0001/2345/t/12/assets/base.css?v=123">' . "\n"
                     . '    <link rel="stylesheet" href="https://cdn.shopify.com/s/files/1/0001/2345/t/12/assets/theme.css">' . "\n"
                     . '    <script src="https://cdn.shopify.com/s/files/1/0001/2345/t/12/assets/theme.js"></script>' . "\n"
-                    . '    <script src="https://cdn.shopify.com/s/files/1/0001/2345/t/12/assets/constants.js"></script>' . "\n"
+                    . '    <script src="https://cdn.shopify.com/s/files/1/0001/2345/t/12/assets/predictive-search.js"></script>' . "\n"
                     . '</head>' . "\n"
                     . '<body>' . "\n"
                     . '    <script>window.Shopify = { routes: { root: "/" } };</script>' . "\n"

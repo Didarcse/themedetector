@@ -63,17 +63,14 @@ final class AssetPathRuleTest extends TestCase
         );
     }
 
-    public function test_detects_templates_path(): void
+    public function test_does_not_detect_generic_templates_path(): void
     {
         $result = $this->evaluate(
-            '<link href="/templates/cassiopeia/css/template.css">'
+            '<link href="/templates/site/css/theme.css">'
         );
 
-        self::assertTrue($result['matched']);
-        self::assertSame(
-            ['asset_path' => '/templates/'],
-            $result['metadata'],
-        );
+        self::assertFalse($result['matched']);
+        self::assertSame([], $result['metadata']);
     }
 
     public function test_detects_asset_path_in_link_element(): void
@@ -97,7 +94,7 @@ final class AssetPathRuleTest extends TestCase
     public function test_detects_asset_path_in_img_element(): void
     {
         $result = $this->evaluate(
-            '<img src="/templates/cassiopeia/images/logo.png">'
+            '<img src="/media/system/images/logo.png">'
         );
 
         self::assertTrue($result['matched']);

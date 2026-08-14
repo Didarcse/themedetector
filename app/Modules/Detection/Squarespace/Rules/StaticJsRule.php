@@ -33,7 +33,6 @@ final readonly class StaticJsRule implements RuleInterface
         'Squarespace.load',
         'Squarespace.initialize',
         'static.squarespace.com',
-        'Y.use(',
     ];
 
     /**

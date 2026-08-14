@@ -35,8 +35,6 @@ final readonly class AssetPathRule implements RuleInterface
     private const WEIGHT = 20;
 
     private const PATHS = [
-        '/content/themes/',
-        '/content/images/',
         '/assets/built/',
     ];
 

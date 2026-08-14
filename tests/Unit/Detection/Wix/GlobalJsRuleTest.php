@@ -38,25 +38,25 @@ final class GlobalJsRuleTest extends TestCase
         self::assertTrue($result['matched']);
     }
 
-    public function test_detects_window_client_side_render(): void
+    public function test_does_not_detect_window_client_side_render(): void
     {
         $result = $this->evaluate('<script>window.clientSideRender = true;</script>');
 
-        self::assertTrue($result['matched']);
+        self::assertFalse($result['matched']);
     }
 
-    public function test_detects_window_initial_state(): void
+    public function test_does_not_detect_window_initial_state(): void
     {
         $result = $this->evaluate('<script>window.__INITIAL_STATE__ = {};</script>');
 
-        self::assertTrue($result['matched']);
+        self::assertFalse($result['matched']);
     }
 
-    public function test_detects_window_tb(): void
+    public function test_does_not_detect_window_tb(): void
     {
         $result = $this->evaluate('<script>window.tb = {};</script>');
 
-        self::assertTrue($result['matched']);
+        self::assertFalse($result['matched']);
     }
 
     public function test_detects_case_insensitively(): void
@@ -71,7 +71,7 @@ final class GlobalJsRuleTest extends TestCase
         $result = $this->evaluate(
             '<script>' .
             'window.viewerModel = {};' .
-            'window.tb = {};' .
+            'window.wixBiSession = {};' .
             '</script>'
         );
 

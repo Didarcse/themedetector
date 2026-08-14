@@ -24,11 +24,11 @@ final class ViewerModelRuleTest extends TestCase
         return $this->createRule()->evaluate($html, self::URL);
     }
 
-    public function test_detects_viewer_model(): void
+    public function test_does_not_detect_bare_viewer_model(): void
     {
         $result = $this->evaluate('<script>viewerModel = {};</script>');
 
-        self::assertTrue($result['matched']);
+        self::assertFalse($result['matched']);
     }
 
     public function test_detects_site_features_configs(): void
@@ -45,16 +45,16 @@ final class ViewerModelRuleTest extends TestCase
         self::assertTrue($result['matched']);
     }
 
-    public function test_detects_fleet_config(): void
+    public function test_does_not_detect_fleet_config(): void
     {
         $result = $this->evaluate('<script>fleetConfig = {};</script>');
 
-        self::assertTrue($result['matched']);
+        self::assertFalse($result['matched']);
     }
 
     public function test_detects_case_insensitively(): void
     {
-        $result = $this->evaluate('<script>VIEWERMODEL = {};</script>');
+        $result = $this->evaluate('<script>SITEFEATURESCONFIGS = {};</script>');
 
         self::assertTrue($result['matched']);
     }
@@ -63,13 +63,13 @@ final class ViewerModelRuleTest extends TestCase
     {
         $result = $this->evaluate(
             '<script>' .
-            'viewerModel = {};' .
-            'fleetConfig = {};' .
+            'siteFeaturesConfigs = {};' .
+            'clientSpecMap = {};' .
             '</script>'
         );
 
         self::assertSame(
-            ['viewer_model' => 'viewerModel'],
+            ['viewer_model' => 'siteFeaturesConfigs'],
             $result['metadata']
         );
     }
@@ -91,17 +91,17 @@ final class ViewerModelRuleTest extends TestCase
 
     public function test_returns_expected_weight(): void
     {
-        $result = $this->evaluate('<script>viewerModel = {};</script>');
+        $result = $this->evaluate('<script>siteFeaturesConfigs = {};</script>');
 
         self::assertSame(15, $result['weight']);
     }
 
     public function test_returns_viewer_model_metadata(): void
     {
-        $result = $this->evaluate('<script>viewerModel = {};</script>');
+        $result = $this->evaluate('<script>siteFeaturesConfigs = {};</script>');
 
         self::assertSame(
-            ['viewer_model' => 'viewerModel'],
+            ['viewer_model' => 'siteFeaturesConfigs'],
             $result['metadata']
         );
     }

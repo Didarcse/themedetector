@@ -34,7 +34,6 @@ final readonly class ApiEndpointRule implements RuleInterface
         '/ghost/api/',
         '/ghost/api/content/',
         '/ghost/api/admin/',
-        '/ghost/',
     ];
 
     /**

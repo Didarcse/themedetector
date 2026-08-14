@@ -57,15 +57,12 @@ final class ApiEndpointRuleTest extends TestCase
         );
     }
 
-    public function test_detects_ghost_directory(): void
+    public function test_does_not_detect_bare_ghost_directory(): void
     {
-        $result = $this->evaluate('<a href="/ghost/"></a>');
+        $result = $this->evaluate('<a href="/ghost/hollow-forest">Play as the ghost</a>');
 
-        self::assertTrue($result['matched']);
-        self::assertSame(
-            ['api_endpoint' => '/ghost/'],
-            $result['metadata'],
-        );
+        self::assertFalse($result['matched']);
+        self::assertSame([], $result['metadata']);
     }
 
     public function test_detects_case_insensitively(): void

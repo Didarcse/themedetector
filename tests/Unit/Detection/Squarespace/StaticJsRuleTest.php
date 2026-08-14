@@ -47,11 +47,12 @@ final class StaticJsRuleTest extends TestCase
         self::assertTrue($result['matched']);
     }
 
-    public function test_detects_y_use(): void
+    public function test_does_not_detect_generic_yui_use(): void
     {
         $result = $this->evaluate("<script>Y.use('node');</script>");
 
-        self::assertTrue($result['matched']);
+        self::assertFalse($result['matched']);
+        self::assertSame([], $result['metadata']);
     }
 
     public function test_detects_case_insensitively(): void
@@ -66,7 +67,7 @@ final class StaticJsRuleTest extends TestCase
         $result = $this->evaluate(
             '<script>' .
             "Squarespace.load();" .
-            "Y.use('node');" .
+            "Squarespace.initialize();" .
             '</script>'
         );
 

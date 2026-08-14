@@ -69,7 +69,7 @@ final class WixBenchmarkCases implements BenchmarkCaseProvider
                     . '    <link rel="stylesheet" href="https://siteassets.parastorage.com/71c2b3c4d5e6f7a8b9c0d1e2/page.css">' . "\n"
                     . '</head>' . "\n"
                     . '<body>' . "\n"
-                    . '    <script>window.__INITIAL_STATE__ = {"apps": {}}; window.clientSideRender = true;</script>' . "\n"
+                    . '    <script>window.wixBiSession = {"siteId":"71c2b3c4d5e6f7a8b9c0d1e2"};</script>' . "\n"
                     . '    <div id="SITE_ROOT"><h1>Fresh food, fast</h1></div>' . "\n"
                     . '</body>' . "\n"
                     . '</html>',

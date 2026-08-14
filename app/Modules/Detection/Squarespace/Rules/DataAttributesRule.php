@@ -36,7 +36,6 @@ final readonly class DataAttributesRule implements RuleInterface
 
     private const ATTRIBUTES = [
         'data-animation-role',
-        'data-section-id',
         'data-current-styles',
     ];
 

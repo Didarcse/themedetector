@@ -30,9 +30,6 @@ final readonly class GlobalJsRule implements RuleInterface
     private const FINGERPRINTS = [
         'window.viewerModel',
         'window.wixBiSession',
-        'window.clientSideRender',
-        'window.__INITIAL_STATE__',
-        'window.tb',
     ];
 
     /**

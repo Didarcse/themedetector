@@ -24,30 +24,24 @@ final class AssetPathRuleTest extends TestCase
         return $this->createRule()->evaluate($html, self::URL);
     }
 
-    public function test_detects_content_themes_path(): void
+    public function test_does_not_detect_content_themes_path(): void
     {
         $result = $this->evaluate(
-            '<link href="/content/themes/casper/style.css">'
+            '<link href="/content/themes/custom/style.css">'
         );
 
-        self::assertTrue($result['matched']);
-        self::assertSame(
-            ['asset_path' => '/content/themes/'],
-            $result['metadata'],
-        );
+        self::assertFalse($result['matched']);
+        self::assertSame([], $result['metadata']);
     }
 
-    public function test_detects_content_images_path(): void
+    public function test_does_not_detect_content_images_path(): void
     {
         $result = $this->evaluate(
             '<img src="/content/images/logo.png">'
         );
 
-        self::assertTrue($result['matched']);
-        self::assertSame(
-            ['asset_path' => '/content/images/'],
-            $result['metadata'],
-        );
+        self::assertFalse($result['matched']);
+        self::assertSame([], $result['metadata']);
     }
 
     public function test_detects_assets_built_path(): void
@@ -66,7 +60,7 @@ final class AssetPathRuleTest extends TestCase
     public function test_detects_asset_path_in_link_element(): void
     {
         $result = $this->evaluate(
-            '<link href="/content/themes/casper/style.css">'
+            '<link href="/assets/built/screen.css">'
         );
 
         self::assertTrue($result['matched']);
@@ -84,7 +78,7 @@ final class AssetPathRuleTest extends TestCase
     public function test_detects_asset_path_in_img_element(): void
     {
         $result = $this->evaluate(
-            '<img src="/content/images/logo.png">'
+            '<img src="/assets/built/logo.png">'
         );
 
         self::assertTrue($result['matched']);
@@ -92,14 +86,14 @@ final class AssetPathRuleTest extends TestCase
 
     public function test_returns_first_matching_asset_path(): void
     {
-        $html = '<link href="/content/themes/casper/style.css">'
+        $html = '<link href="/assets/built/screen.css">'
             . '<script src="/assets/built/app.js"></script>';
 
         $result = $this->evaluate($html);
 
         self::assertTrue($result['matched']);
         self::assertSame(
-            ['asset_path' => '/content/themes/'],
+            ['asset_path' => '/assets/built/'],
             $result['metadata'],
         );
     }
@@ -129,7 +123,7 @@ final class AssetPathRuleTest extends TestCase
     public function test_returns_expected_weight(): void
     {
         $result = $this->evaluate(
-            '<link href="/content/themes/casper/style.css">'
+            '<link href="/assets/built/screen.css">'
         );
 
         self::assertSame(20, $result['weight']);
@@ -138,11 +132,11 @@ final class AssetPathRuleTest extends TestCase
     public function test_returns_asset_path_metadata(): void
     {
         $result = $this->evaluate(
-            '<link href="/content/themes/casper/style.css">'
+            '<link href="/assets/built/screen.css">'
         );
 
         self::assertSame(
-            ['asset_path' => '/content/themes/'],
+            ['asset_path' => '/assets/built/'],
             $result['metadata'],
         );
     }

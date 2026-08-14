@@ -8,6 +8,7 @@ use App\Modules\Detection\DetectionContext;
 use App\Modules\Detection\DetectionResult;
 use App\Modules\Detection\Joomla\ConfidenceCalculator;
 use App\Modules\Detection\Joomla\JoomlaDetector;
+use App\Modules\Detection\Joomla\Rules\ApiEndpointRule;
 use App\Modules\Detection\Joomla\Rules\AssetPathRule;
 use App\Modules\Detection\Joomla\Rules\MetaGeneratorRule;
 use App\Modules\Detection\Joomla\Rules\RuleInterface;
@@ -186,6 +187,21 @@ final class JoomlaDetectorTest extends TestCase
 
         self::assertSame(['MetaGeneratorRule'], $result->metadata()['matched_rules']);
         self::assertArrayHasKey('generator', $result->metadata());
+    }
+
+    public function test_does_not_detect_generic_api_page(): void
+    {
+        $html = '<html><body>'
+            . '<nav><a href="/api/orders">Orders</a></nav>'
+            . '<script>fetch("/api/checkout");</script>'
+            . '<link rel="stylesheet" href="/templates/site/theme.css">'
+            . '</body></html>';
+
+        $detector = $this->createDetector([new ApiEndpointRule(), new AssetPathRule()]);
+        $result = $detector->detect($this->createContext($html));
+
+        self::assertFalse($result->isDetected());
+        self::assertSame(0, $result->confidence());
     }
 
     public function test_returns_detection_result(): void

@@ -33,7 +33,6 @@ final readonly class ApiEndpointRule implements RuleInterface
     private const ENDPOINTS = [
         '/api/index.php',
         'index.php?option=com_api',
-        '/api/',
     ];
 
     /**

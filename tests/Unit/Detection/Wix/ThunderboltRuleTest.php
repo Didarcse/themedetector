@@ -45,11 +45,12 @@ final class ThunderboltRuleTest extends TestCase
         self::assertTrue($result['matched']);
     }
 
-    public function test_detects_thunderbolt(): void
+    public function test_does_not_detect_bare_thunderbolt_word(): void
     {
-        $result = $this->evaluate('<script>thunderbolt</script>');
+        $result = $this->evaluate('<article>Thunderbolt 4 port</article>');
 
-        self::assertTrue($result['matched']);
+        self::assertFalse($result['matched']);
+        self::assertSame([], $result['metadata']);
     }
 
     public function test_detects_case_insensitively(): void

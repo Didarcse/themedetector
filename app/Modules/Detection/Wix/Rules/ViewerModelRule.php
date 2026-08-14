@@ -28,10 +28,8 @@ final readonly class ViewerModelRule implements RuleInterface
     private const WEIGHT = 15;
 
     private const FINGERPRINTS = [
-        'viewerModel',
         'siteFeaturesConfigs',
         'clientSpecMap',
-        'fleetConfig',
     ];
 
     /**

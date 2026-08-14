@@ -5,17 +5,23 @@ declare(strict_types=1);
 namespace App\Modules\Detection\Shopify\Rules;
 
 /**
- * Detects Shopify by identifying common Shopify Online Store 2.0 theme
- * asset filenames referenced in HTML.
+ * Detects Shopify by identifying distinctive Shopify Online Store 2.0
+ * theme asset filenames referenced in HTML.
  *
- * Complements ShopifyAssetsRule by matching well-known theme filenames
- * rather than path structures.
+ * Complements ShopifyAssetsRule by matching well-known Dawn theme
+ * filenames rather than path structures.  Only filenames that are
+ * strongly associated with Shopify's default Dawn theme are considered;
+ * generic names such as theme.css, base.css, global.js, vendor.js or
+ * cart.js are deliberately excluded because they appear on unrelated
+ * sites.
  */
 final class ThemeAssetsRule implements RuleInterface
 {
     private const CONFIDENCE = 15;
 
-    private const PATTERN = '/\b(?:base\.css|theme\.css|theme\.min\.css|theme\.js|theme\.min\.js|global\.js|vendor\.js|constants\.js|animations\.js|details-disclosure\.js|details-modal\.js|predictive-search\.js|component-card\.css|component-price\.css|component-slider\.css|component-cart\.css|component-search\.css|quick-add\.js|cart\.js|product-form\.js)\b/i';
+    private const PATTERN = '/\b(?:details-disclosure\.js|details-modal\.js|predictive-search\.js'
+        . '|component-card\.css|component-price\.css|component-slider\.css'
+        . '|component-cart\.css|component-search\.css|quick-add\.js|product-form\.js)\b/i';
 
     /**
      * Evaluate the HTML for Shopify theme asset filename references.

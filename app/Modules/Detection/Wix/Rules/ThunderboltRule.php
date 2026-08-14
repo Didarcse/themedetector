@@ -31,7 +31,6 @@ final readonly class ThunderboltRule implements RuleInterface
         'wix-thunderbolt',
         'tbReady',
         'tbInit',
-        'thunderbolt',
     ];
 
     /**

@@ -38,7 +38,6 @@ final readonly class AssetPathRule implements RuleInterface
         '/media/system/',
         '/media/jui/',
         '/media/com_',
-        '/templates/',
     ];
 
     private const TAG_ATTRIBUTE_MAP = [

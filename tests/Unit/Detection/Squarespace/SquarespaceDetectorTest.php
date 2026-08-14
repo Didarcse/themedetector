@@ -8,6 +8,7 @@ use App\Modules\Detection\DetectionContext;
 use App\Modules\Detection\DetectionResult;
 use App\Modules\Detection\Squarespace\ConfidenceCalculator;
 use App\Modules\Detection\Squarespace\Rules\AssetPathRule;
+use App\Modules\Detection\Squarespace\Rules\DataAttributesRule;
 use App\Modules\Detection\Squarespace\Rules\MetaGeneratorRule;
 use App\Modules\Detection\Squarespace\Rules\RuleInterface;
 use App\Modules\Detection\Squarespace\Rules\StaticJsRule;
@@ -186,6 +187,20 @@ final class SquarespaceDetectorTest extends TestCase
 
         self::assertSame(['MetaGeneratorRule'], $result->metadata()['matched_rules']);
         self::assertArrayHasKey('generator', $result->metadata());
+    }
+
+    public function test_does_not_detect_generic_yui_section_page(): void
+    {
+        $html = '<html><body>'
+            . '<section data-section-id="main">Content</section>'
+            . '<script>Y.use("node", function (Y) { Y.one("#app"); });</script>'
+            . '</body></html>';
+
+        $detector = $this->createDetector([new StaticJsRule(), new DataAttributesRule()]);
+        $result = $detector->detect($this->createContext($html));
+
+        self::assertFalse($result->isDetected());
+        self::assertSame(0, $result->confidence());
     }
 
     public function test_returns_detection_result(): void
