@@ -8,6 +8,7 @@ use App\Core\Container;
 use App\Modules\Detection\DetectionContext;
 use App\Modules\Http\HttpClientInterface;
 use App\Modules\Http\HttpResponse;
+use App\Modules\ThemeExtraction\Drupal\DrupalThemeExtractor;
 use App\Modules\ThemeExtraction\Joomla\JoomlaThemeExtractor;
 use App\Modules\ThemeExtraction\ThemeExtractionManager;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistry;
@@ -47,14 +48,14 @@ final class ShopifyThemeExtractorRegistrationTest extends TestCase
 
     /**
      * Verify that the factory registers WordPress before Shopify before
-     * Joomla.
+     * Joomla before Drupal.
      *
      * The registration order is deliberate: on ties the manager favours
      * the first registered extractor, so WordPress must remain first for
-     * WordPress pages to keep winning while Shopify and Joomla pages win
-     * through their higher confidence.
+     * WordPress pages to keep winning while Shopify, Joomla, and Drupal
+     * pages win through their higher confidence.
      */
-    public function test_factory_registers_wordpress_before_shopify_before_joomla(): void
+    public function test_factory_registers_wordpress_before_shopify_before_joomla_before_drupal(): void
     {
         $container = new Container();
         $container->set(
@@ -69,10 +70,11 @@ final class ShopifyThemeExtractorRegistrationTest extends TestCase
             $materialized[] = $extractor;
         }
 
-        self::assertCount(3, $materialized);
+        self::assertCount(4, $materialized);
         self::assertInstanceOf(WordPressThemeExtractor::class, $materialized[0]);
         self::assertInstanceOf(ShopifyThemeExtractor::class, $materialized[1]);
         self::assertInstanceOf(JoomlaThemeExtractor::class, $materialized[2]);
+        self::assertInstanceOf(DrupalThemeExtractor::class, $materialized[3]);
     }
 
     /**

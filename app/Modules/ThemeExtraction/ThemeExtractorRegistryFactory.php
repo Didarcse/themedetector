@@ -5,9 +5,16 @@ declare(strict_types=1);
 namespace App\Modules\ThemeExtraction;
 
 use App\Core\Container;
+use App\Modules\Detection\Drupal\Rules\HtmlSignatureRule;
+use App\Modules\Detection\Drupal\Rules\MetaGeneratorRule as DrupalMetaGeneratorRule;
+use App\Modules\Detection\Drupal\Rules\ScriptFingerprintRule as DrupalScriptFingerprintRule;
 use App\Modules\Detection\Joomla\Rules\MetaGeneratorRule;
 use App\Modules\Detection\Joomla\Rules\ScriptFingerprintRule;
 use App\Modules\Http\HttpClientInterface;
+use App\Modules\ThemeExtraction\Drupal\DrupalContextGate;
+use App\Modules\ThemeExtraction\Drupal\DrupalThemeExtractor;
+use App\Modules\ThemeExtraction\Drupal\DrupalThemeLocator;
+use App\Modules\ThemeExtraction\Drupal\DrupalThemeMetadataMapper;
 use App\Modules\ThemeExtraction\Joomla\JoomlaContextGate;
 use App\Modules\ThemeExtraction\Joomla\JoomlaTemplateLocator;
 use App\Modules\ThemeExtraction\Joomla\JoomlaThemeExtractor;
@@ -81,6 +88,15 @@ final readonly class ThemeExtractorRegistryFactory
                 ),
                 new JoomlaTemplateLocator(),
                 new JoomlaThemeMetadataMapper(),
+            ),
+            new DrupalThemeExtractor(
+                new DrupalContextGate(
+                    new DrupalMetaGeneratorRule(),
+                    new DrupalScriptFingerprintRule(),
+                    new HtmlSignatureRule(),
+                ),
+                new DrupalThemeLocator(),
+                new DrupalThemeMetadataMapper(),
             ),
         ]);
     }

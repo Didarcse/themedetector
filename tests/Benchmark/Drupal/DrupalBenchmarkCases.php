@@ -16,11 +16,16 @@ use Tests\Benchmark\Contracts\BenchmarkCaseProvider;
  * drupalSettings/Drupal.behaviors JavaScript fingerprints. Negative cases
  * carry generic CMS-agnostic paths such as /node/, /entity/, and
  * /user/login, which must never be mistaken for Drupal evidence.
+ * Drupal themes are not reported by the CMS detection engine; the theme
+ * extraction engine reports the theme directory name located from a
+ * root-anchored /themes/contrib/{slug}/ or /themes/custom/{slug}/ path.
+ * The newsroom case carries such a path and expects the theme newsroom,
+ * while every other case carries no theme evidence and expects no theme.
  *
  * Design philosophy:
  *
  * - Each case is a self-contained, offline HTML fixture: no HTTP.
- * - Ground truth is explicit: the expected CMS, and empty theme and plugin
+ * - Ground truth is explicit: the expected CMS, theme, and empty plugin
  *   sets.
  * - Stateless, deterministic, and side-effect free.
  */
@@ -82,7 +87,7 @@ final class DrupalBenchmarkCases implements BenchmarkCaseProvider
                     . '</body>' . "\n"
                     . '</html>',
                 expectedTechnology: 'Drupal',
-                expectedTheme: null,
+                expectedTheme: 'newsroom',
                 expectedPlugins: [],
             ),
             new BenchmarkCase(
