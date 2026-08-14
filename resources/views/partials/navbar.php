@@ -42,14 +42,6 @@ $detectHref = $activeNav === 'home' || $activeNav === 'detector' ? '#detect' : '
                         <?= $activeNav === 'about' ? 'aria-current="page"' : '' ?>
                     >About</a>
                 </li>
-                <li class="nav-item">
-                    <a
-                        class="nav-link"
-                        href="https://github.com/Didarcse/themedetector"
-                        target="_blank"
-                        rel="noopener"
-                    >GitHub <i class="bi bi-box-arrow-up-right small ms-1" aria-hidden="true"></i></a>
-                </li>
                 <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
                     <a class="btn btn-primary px-3" href="<?= htmlspecialchars($detectHref, ENT_QUOTES, 'UTF-8') ?>">Detect Website</a>
                 </li>

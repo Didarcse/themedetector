@@ -11,14 +11,6 @@
                 <p class="small mb-0">Detect the CMS, theme, theme version, author, and active plugins behind any website in seconds. Free, private, and no sign-up required.</p>
             </div>
             <div class="col-6 col-lg-3">
-                <h2 class="h6 text-white fw-semibold mb-3">Quick Links</h2>
-                <ul class="list-unstyled mb-0">
-                    <li class="mb-2">
-                        <a href="https://github.com/Didarcse/themedetector" target="_blank" rel="noopener">GitHub</a>
-                    </li>
-                </ul>
-            </div>
-            <div class="col-6 col-lg-3">
                 <h2 class="h6 text-white fw-semibold mb-3">Product</h2>
                 <ul class="list-unstyled mb-0">
                     <li class="mb-2"><a href="/">Detect Website</a></li>
@@ -31,7 +23,7 @@
         <hr class="border-secondary-subtle my-4">
         <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
             <p class="small mb-0">&copy; <?= date('Y') ?> ThemeDetectorTool. All rights reserved.</p>
-            <p class="small mb-0">Powered by Global Kernel</p>
+            <p class="small mb-0">Powered by <a href="https://globalkernel.com" target="_blank" rel="noopener noreferrer">Global Kernel</a></p>
         </div>
     </div>
 </footer>
