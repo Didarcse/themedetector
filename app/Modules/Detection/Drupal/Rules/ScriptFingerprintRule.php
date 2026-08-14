@@ -31,10 +31,11 @@ final readonly class ScriptFingerprintRule implements RuleInterface
     private const WEIGHT = 25;
 
     private const FINGERPRINTS = [
-        'Drupal',
+        'window.Drupal',
         'drupalSettings',
+        'Drupal.settings',
         'Drupal.behaviors',
-        'once(',
+        'Drupal.once',
     ];
 
     /**

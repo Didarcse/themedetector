@@ -31,7 +31,7 @@ final readonly class ScriptFingerprintRule implements RuleInterface
     private const WEIGHT = 25;
 
     private const FINGERPRINTS = [
-        'TYPO3',
+        'window.TYPO3',
         'TYPO3.settings',
         'TYPO3.lang',
         'TYPO3.Configuration',

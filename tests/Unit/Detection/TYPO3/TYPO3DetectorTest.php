@@ -166,7 +166,7 @@ final class TYPO3DetectorTest extends TestCase
     public function test_collects_matched_rule_names(): void
     {
         $html = '<meta name="generator" content="TYPO3">'
-            . '<script>TYPO3 = {};</script>';
+            . '<script>window.TYPO3 = {};</script>';
 
         $detector = $this->createDetector([new MetaGeneratorRule(), new ScriptFingerprintRule()]);
         $result = $detector->detect($this->createContext($html));
@@ -186,6 +186,26 @@ final class TYPO3DetectorTest extends TestCase
 
         self::assertSame(['MetaGeneratorRule'], $result->metadata()['matched_rules']);
         self::assertArrayHasKey('generator', $result->metadata());
+    }
+
+    public function test_does_not_detect_bare_typo3_name_only(): void
+    {
+        $html = '<!DOCTYPE html><html><body>'
+            . '<p>Learn about TYPO3 and other CMS tools here.</p>'
+            . '<style>.btn-typo3:hover { opacity: 0.8; }</style>'
+            . '<a href="https://example.com/typo3/guides">guides</a>'
+            . '</body></html>';
+
+        $detector = $this->createDetector([
+            new MetaGeneratorRule(),
+            new ScriptFingerprintRule(),
+            new AssetPathRule(),
+        ]);
+        $result = $detector->detect($this->createContext($html));
+
+        self::assertFalse($result->isDetected());
+        self::assertSame(0, $result->confidence());
+        self::assertSame([], $result->metadata());
     }
 
     public function test_returns_detection_result(): void

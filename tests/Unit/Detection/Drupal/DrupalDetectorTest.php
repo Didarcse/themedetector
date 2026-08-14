@@ -166,7 +166,7 @@ final class DrupalDetectorTest extends TestCase
     public function test_collects_matched_rule_names(): void
     {
         $html = '<meta name="generator" content="Drupal">'
-            . '<script>Drupal = {};</script>';
+            . '<script>window.Drupal = {};</script>';
 
         $detector = $this->createDetector([new MetaGeneratorRule(), new ScriptFingerprintRule()]);
         $result = $detector->detect($this->createContext($html));
@@ -186,6 +186,26 @@ final class DrupalDetectorTest extends TestCase
 
         self::assertSame(['MetaGeneratorRule'], $result->metadata()['matched_rules']);
         self::assertArrayHasKey('generator', $result->metadata());
+    }
+
+    public function test_does_not_detect_bare_drupal_name_only(): void
+    {
+        $html = '<!DOCTYPE html><html><body>'
+            . '<p>Learn about Drupal and other CMS tools here.</p>'
+            . '<style>.btn-drupal:hover { opacity: 0.8; }</style>'
+            . '<a href="https://example.com/drupal/docs">docs</a>'
+            . '</body></html>';
+
+        $detector = $this->createDetector([
+            new MetaGeneratorRule(),
+            new ScriptFingerprintRule(),
+            new AssetPathRule(),
+        ]);
+        $result = $detector->detect($this->createContext($html));
+
+        self::assertFalse($result->isDetected());
+        self::assertSame(0, $result->confidence());
+        self::assertSame([], $result->metadata());
     }
 
     public function test_returns_detection_result(): void
