@@ -104,11 +104,12 @@ final readonly class NativeCurlAdapter implements CurlAdapterInterface
     /**
      * Build the immutable set of cURL options for a GET request.
      *
-     * The option set is fixed and safe: timeouts are bounded, redirects
-     * are followed to a strict maximum, the allowed protocols are
-     * restricted to HTTP and HTTPS for both the initial request and any
-     * redirects, SSL verification is enabled, and all supported content
-     * encodings are accepted.
+     * The option set is fixed and safe: timeouts are bounded, automatic
+     * redirect following is disabled so the client layer can validate
+     * every redirect target against the SSRF URL policy, the allowed
+     * protocols are restricted to HTTP and HTTPS for both the initial
+     * request and any redirects (defense-in-depth), SSL verification is
+     * enabled, and all supported content encodings are accepted.
      *
      * @return array<int, mixed>
      */
@@ -118,7 +119,7 @@ final readonly class NativeCurlAdapter implements CurlAdapterInterface
             CURLOPT_URL             => $url,
             CURLOPT_RETURNTRANSFER  => true,
             CURLOPT_HEADER          => true,
-            CURLOPT_FOLLOWLOCATION  => true,
+            CURLOPT_FOLLOWLOCATION  => false,
             CURLOPT_MAXREDIRS       => 10,
             CURLOPT_TIMEOUT         => $timeout,
             CURLOPT_CONNECTTIMEOUT  => 5,

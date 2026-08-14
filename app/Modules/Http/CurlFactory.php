@@ -29,7 +29,7 @@ final class CurlFactory
 
         curl_setopt_array($handle, [
             CURLOPT_RETURNTRANSFER  => true,
-            CURLOPT_FOLLOWLOCATION  => true,
+            CURLOPT_FOLLOWLOCATION  => false,
             CURLOPT_MAXREDIRS       => 10,
             CURLOPT_CONNECTTIMEOUT  => 10,
             CURLOPT_TIMEOUT         => 30,

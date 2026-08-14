@@ -78,7 +78,7 @@ CSS;
 
     public function test_detect_builds_full_view_model(): void
     {
-        $service = $this->service(new FakeHttpClient(self::HOMEPAGE_HTML, self::STYLESHEET_CSS));
+        $service = $this->service(new FakeServiceHttpClient(self::HOMEPAGE_HTML, self::STYLESHEET_CSS));
 
         $viewModel = $service->detect('example.com');
 
@@ -100,7 +100,7 @@ CSS;
 
     public function test_detect_returns_error_view_model_for_invalid_url(): void
     {
-        $service = $this->service(new FakeHttpClient(self::HOMEPAGE_HTML, self::STYLESHEET_CSS));
+        $service = $this->service(new FakeServiceHttpClient(self::HOMEPAGE_HTML, self::STYLESHEET_CSS));
 
         $viewModel = $service->detect('not a url!!');
 
@@ -113,7 +113,7 @@ CSS;
 
     public function test_detect_returns_error_view_model_on_transport_failure(): void
     {
-        $service = $this->service(new ThrowingHttpClient());
+        $service = $this->service(new ThrowingServiceHttpClient());
 
         $viewModel = $service->detect('https://example.com');
 
@@ -167,7 +167,7 @@ CSS;
     }
 }
 
-final class FakeHttpClient implements HttpClientInterface
+final class FakeServiceHttpClient implements HttpClientInterface
 {
     public function __construct(
         private string $homepageHtml,
@@ -196,7 +196,7 @@ final class FakeHttpClient implements HttpClientInterface
     }
 }
 
-final class ThrowingHttpClient implements HttpClientInterface
+final class ThrowingServiceHttpClient implements HttpClientInterface
 {
     public function get(string $url): HttpResponse
     {

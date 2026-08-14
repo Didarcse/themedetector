@@ -14,14 +14,36 @@ namespace App\Modules\Http;
  */
 class HttpClient
 {
+    private const MAX_REDIRECTS = 10;
+
+    private const TOTAL_TIMEOUT = 30;
+
+    private ?UrlHostPolicy $urlPolicy = null;
+
+    public function __construct(?UrlHostPolicy $urlPolicy = null)
+    {
+        $this->urlPolicy = $urlPolicy;
+    }
+
+    /**
+     * Return the SSRF destination policy for this client.
+     */
+    private function policy(): UrlHostPolicy
+    {
+        return $this->urlPolicy ??= new UrlHostPolicy();
+    }
+
     /**
      * Validate a URL string and return the trimmed, valid value.
      *
-     * @throws HttpException If the URL is empty or malformed.
+     * The destination must also pass the SSRF destination policy; unsafe
+     * destinations are rejected before any outbound request is made.
+     *
+     * @throws HttpException If the URL is empty, malformed, or unsafe.
      *
      * @return non-empty-string The validated URL.
      */
-    private static function validateUrl(string $url): string
+    private function validateUrl(string $url): string
     {
         $url = trim($url);
 
@@ -30,7 +52,11 @@ class HttpClient
         }
 
         if (filter_var($url, FILTER_VALIDATE_URL) === false) {
-            throw new HttpException("Invalid URL: {$url}");
+            throw new HttpException('Invalid URL.');
+        }
+
+        if (!$this->policy()->isAllowed($url)) {
+            throw new HttpException('Invalid URL.');
         }
 
         return $url;
@@ -71,38 +97,174 @@ class HttpClient
     /**
      * Perform an HTTP GET request and return an immutable response.
      *
-     * @throws HttpException On invalid URL or cURL failure.
+     * The initial URL and every redirect target are validated against the
+     * SSRF destination policy before any request is performed. Automatic
+     * redirect following is disabled in the transport, so redirects are
+     * followed manually here: each Location is read, resolved against the
+     * current URL, validated, and only followed when safe. At most 10
+     * redirects are followed; a chain longer than that is returned as the
+     * redirect response without further fetches. The total time budget
+     * spans every hop of the chain.
+     *
+     * @throws HttpException On invalid or unsafe URL, request timeout, or
+     *                       cURL failure.
      */
     public function get(string $url): HttpResponse
     {
-        $url = self::validateUrl($url);
+        $url = $this->validateUrl($url);
 
-        $handle = CurlFactory::create();
+        $originalUrl = $url;
+        $currentUrl = $url;
+        $redirects = 0;
+        $deadline = microtime(true) + self::TOTAL_TIMEOUT;
 
-        try {
-            curl_setopt($handle, CURLOPT_URL, $url);
+        while (true) {
+            $handle = CurlFactory::create();
 
-            $response = curl_exec($handle);
+            try {
+                curl_setopt($handle, CURLOPT_URL, $currentUrl);
+                curl_setopt($handle, CURLOPT_TIMEOUT, $this->remainingTimeout($deadline));
 
-            if (!is_string($response)) {
-                $error = curl_error($handle);
-                throw new HttpException("cURL error: {$error}");
+                $exchange = curl_exec($handle);
+
+                if (!is_string($exchange)) {
+                    $error = curl_error($handle);
+                    throw new HttpException("cURL error: {$error}");
+                }
+
+                $info = curl_getinfo($handle);
+
+                $rawHeaders = substr($exchange, 0, $info['header_size']);
+                $body = substr($exchange, $info['header_size']);
+                $statusCode = (int) $info['http_code'];
+
+                $location = self::redirectLocation($rawHeaders);
+
+                if (self::isRedirect($statusCode) && $location !== null) {
+                    if ($redirects >= self::MAX_REDIRECTS) {
+                        return new HttpResponse(
+                            originalUrl: $originalUrl,
+                            finalUrl: $currentUrl,
+                            statusCode: $statusCode,
+                            headers: self::parseHeaders($rawHeaders),
+                            body: $body,
+                        );
+                    }
+
+                    $currentUrl = $this->validateUrl(self::resolveRedirectUrl($currentUrl, $location));
+                    $redirects++;
+
+                    continue;
+                }
+
+                return new HttpResponse(
+                    originalUrl: $originalUrl,
+                    finalUrl: $currentUrl,
+                    statusCode: $statusCode,
+                    headers: self::parseHeaders($rawHeaders),
+                    body: $body,
+                );
+            } finally {
+                curl_close($handle);
             }
-
-            $info = curl_getinfo($handle);
-
-            $rawHeaders = substr($response, 0, $info['header_size']);
-            $body = substr($response, $info['header_size']);
-
-            return new HttpResponse(
-                originalUrl: $url,
-                finalUrl: $info['url'],
-                statusCode: $info['http_code'],
-                headers: self::parseHeaders($rawHeaders),
-                body: $body,
-            );
-        } finally {
-            curl_close($handle);
         }
+    }
+
+    /**
+     * Return the remaining time budget for the current hop.
+     *
+     * @param float $deadline The absolute deadline for the whole chain.
+     *
+     * @return int The remaining seconds, at least one.
+     *
+     * @throws HttpException When the time budget is exhausted.
+     */
+    private function remainingTimeout(float $deadline): int
+    {
+        $remaining = (int) ceil($deadline - microtime(true));
+
+        if ($remaining <= 0) {
+            throw new HttpException('Request timed out.');
+        }
+
+        return $remaining;
+    }
+
+    /**
+     * Return whether the given status code is a redirect.
+     *
+     * @param int $statusCode The HTTP status code.
+     *
+     * @return bool True when the status is a redirect.
+     */
+    private static function isRedirect(int $statusCode): bool
+    {
+        return in_array($statusCode, [301, 302, 303, 307, 308], true);
+    }
+
+    /**
+     * Extract the Location header from a raw header region.
+     *
+     * @param string $rawHeaders The raw header region of the exchange.
+     *
+     * @return string|null The trimmed Location value, or null when absent.
+     */
+    private static function redirectLocation(string $rawHeaders): ?string
+    {
+        foreach (preg_split('/\r\n|\n|\r/', $rawHeaders) ?: [] as $line) {
+            if (preg_match('/^Location\s*:\s*(.+)$/i', $line, $matches) === 1) {
+                $value = trim($matches[1]);
+
+                if ($value !== '') {
+                    return $value;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve a redirect Location against the current URL.
+     *
+     * Supports absolute, protocol-relative, root-relative, and plain
+     * relative references.
+     *
+     * @param string $currentUrl The current URL.
+     * @param string $location   The raw Location value.
+     *
+     * @return string The resolved absolute URL.
+     */
+    private static function resolveRedirectUrl(string $currentUrl, string $location): string
+    {
+        if (preg_match('#^[a-zA-Z][a-zA-Z0-9+.\-]*://#', $location) === 1) {
+            return $location;
+        }
+
+        $parts = parse_url($currentUrl);
+
+        if ($parts === false) {
+            throw new HttpException('Invalid URL.');
+        }
+
+        $scheme = (string) ($parts['scheme'] ?? 'http');
+        $host = (string) ($parts['host'] ?? '');
+        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+
+        $origin = $scheme . '://' . $host . $port;
+
+        if (str_starts_with($location, '//')) {
+            return $scheme . ':' . $location;
+        }
+
+        if (str_starts_with($location, '/')) {
+            return $origin . $location;
+        }
+
+        $path = (string) ($parts['path'] ?? '');
+        $slashPos = strrpos($path, '/');
+        $directory = $slashPos === false ? '/' : substr($path, 0, $slashPos + 1);
+
+        return $origin . $directory . $location;
     }
 }
