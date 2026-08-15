@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Public Detection API v1 — a single `POST /api/v1/detect` endpoint exposing the
+  existing detection pipeline over JSON.
+- API authentication via Bearer API keys, per-IP and per-key rate limiting, a
+  concurrency workload guard, and a response cache.
+- Shopify theme extraction from the `window.Shopify` global.
+- Joomla template extraction gated by Joomla evidence.
+- Drupal theme extraction gated by Drupal evidence.
+- `robots.txt` and `sitemap.xml` served through the front controller.
+- Production-domain canonical SEO metadata.
+- Outbound HTTP response-body size limit (5 MiB default, configurable via
+  `HTTP_MAX_RESPONSE_BYTES`).
+- Security response headers (`X-Content-Type-Options`, `Referrer-Policy`) on
+  HTML and JSON responses.
+- Runtime extension declarations for `ext-curl` and `ext-json`.
+- Benchmark cases for Joomla, Drupal, Ghost, TYPO3, and Squarespace.
+
+### Changed
+
+- Outbound HTTP hardened against SSRF with a fail-closed URL policy covering
+  loopback, private, link-local, multicast, and encoded-address forms.
+- Theme extraction support scope frozen: WordPress, Shopify, Joomla, and Drupal
+  are extracted; Ghost, TYPO3, and Squarespace are explicitly unsupported; Wix
+  and Webflow expose no theme concept.
+
+### Quality Gates
+
+- PHPUnit 11: 1254 tests, 3058 assertions passing.
+- PHPStan Level MAX: 0 errors.
+- PHP_CodeSniffer PSR-12: 0 errors.
+- Composer audit: 0 security advisories.
+
 ## [2.0.0] - 2026-08-14
 
 ### Added

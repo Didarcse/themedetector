@@ -18,10 +18,14 @@ $reportText = $reportText ?? '';
                 <i class="bi bi-filetype-pdf me-1" aria-hidden="true"></i> Export PDF
                 <span class="badge rounded-pill text-bg-secondary ms-1">Coming soon</span>
             </button>
-            <button type="button" class="btn btn-outline-secondary" disabled>
+            <a
+                class="btn btn-outline-secondary"
+                href="https://github.com/Didarcse/themedetector/blob/main/docs/api.md"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
                 <i class="bi bi-code-square me-1" aria-hidden="true"></i> API Access
-                <span class="badge rounded-pill text-bg-secondary ms-1">Coming soon</span>
-            </button>
+            </a>
         </div>
     </div>
 </div>

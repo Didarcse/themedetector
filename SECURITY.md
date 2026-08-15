@@ -1,7 +1,7 @@
 # Security Policy
 
-ThemeDetectorTool v2 is currently in pre-release development. This document
-describes how to report a vulnerability and what you can expect in response.
+ThemeDetectorTool v2 is a released project. This document describes how to
+report a vulnerability and what you can expect in response.
 
 ## Reporting a Vulnerability
 
@@ -31,12 +31,13 @@ Please include:
 
 ## Supported Versions
 
-As this is a pre-release project, only the latest release on `main` receives
-security fixes. Older tagged versions are not security-supported.
+The latest tagged release and `main` receive security fixes. Older tagged
+versions are not security-supported.
 
 | Version            | Supported          |
 |--------------------|--------------------|
 | `main` (latest)    | Yes                |
+| `2.0.0`            | Yes                |
 | `0.1.x` and older  | No                 |
 
 ## Scope
