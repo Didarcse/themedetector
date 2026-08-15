@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Quality Gates
 
-- PHPUnit 11: 1254 tests, 3058 assertions passing.
+- PHPUnit 11: 1270 tests, 3101 assertions passing.
 - PHPStan Level MAX: 0 errors.
 - PHP_CodeSniffer PSR-12: 0 errors.
 - Composer audit: 0 security advisories.
