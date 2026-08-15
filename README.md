@@ -44,7 +44,7 @@ stages.
 - **Facade-first public API** — every module exposes a single public facade
   (`WebsiteDetector`, `ThemeExtractionManager`, `PluginDetectionManager`, ...).
 - **Quality gates** — PHP 8.2, `declare(strict_types=1)`, PSR-12, PHPStan Level MAX,
-  PHPUnit 11 (974 tests, 1923 assertions).
+  PHPUnit 11 (1254 tests, 3058 assertions).
 
 ## Theme Extraction Support
 
@@ -126,6 +126,8 @@ themedetector/
 ├── routes/
 │   └── web.php                 # Route definitions
 ├── storage/
+│   ├── api/                    # Public API runtime state (rate limits, workload)
+│   ├── cache/                  # Detection response cache
 │   ├── logs/                   # Application logs
 │   └── phpstan/                # PHPStan cache
 ├── tests/
@@ -220,7 +222,7 @@ vendor/bin/phpunit --testsuite tests
 
 `phpunit.xml` is strict: the suite fails on warnings, notices, deprecations, risky
 tests, unexpected global state, and unexpected output. Current status:
-**OK (974 tests, 1923 assertions)**. Benchmark classes live in `tests/Benchmark/`
+**OK (1254 tests, 3058 assertions)**. Benchmark classes live in `tests/Benchmark/`
 and are deliberately **not** part of the PHPUnit suites — run them manually with
 `php tests/Benchmark/<file>.php`.
 
