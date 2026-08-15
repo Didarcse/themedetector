@@ -360,6 +360,7 @@ by the `bootstrap/app.php` container wiring.
 | `API_CACHE_TTL`        | `300`   | Analysis cache TTL in seconds. |
 | `API_MAX_CONCURRENT`   | `10`    | Max concurrent detections (`0` disables). |
 | `HTTP_MAX_RESPONSE_BYTES` | `5242880` | Outbound HTTP response-body size cap in bytes (5 MiB). Applied to every fetched resource across both HTTP clients; oversized responses fail closed as a transport failure. |
+| `HTTP_MAX_HEADER_BYTES` | `65536` | Outbound HTTP response-header size cap in bytes (64 KiB). Applied per HTTP hop across both HTTP clients; oversized header regions fail closed as a transport failure. |
 
 An example is provided in `.env.example`.
 

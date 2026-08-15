@@ -11,6 +11,8 @@ use CurlHandle;
  *
  * Wraps cURL behind a clean API and returns immutable HttpResponse objects.
  * Every request automatically creates and releases its own CurlHandle.
+ * The response body and the raw header region are each streamed through a
+ * bounded collector, so no unbounded response is ever buffered in memory.
  * The class is not final so test doubles may subclass it and override the
  * transport without changing any consumer.
  */
@@ -27,10 +29,15 @@ class HttpClient
      *                              bytes. Responses larger than this are
      *                              failed closed and reported as a
      *                              transport failure.
+     * @param int $maxHeaderBytes   The maximum response-header size in
+     *                              bytes. Header regions larger than this
+     *                              are failed closed and reported as a
+     *                              transport failure.
      */
     public function __construct(
         ?UrlHostPolicy $urlPolicy = null,
         private int $maxResponseBytes = BoundedBodyCollector::DEFAULT_MAX_BYTES,
+        private int $maxHeaderBytes = BoundedHeaderCollector::DEFAULT_MAX_BYTES,
     ) {
         $this->urlPolicy = $urlPolicy;
     }
@@ -132,7 +139,7 @@ class HttpClient
             $handle = CurlFactory::create();
 
             $collector = new BoundedBodyCollector($this->maxResponseBytes);
-            $rawHeaders = '';
+            $headerCollector = new BoundedHeaderCollector($this->maxHeaderBytes);
 
             try {
                 curl_setopt($handle, CURLOPT_URL, $currentUrl);
@@ -145,11 +152,7 @@ class HttpClient
                 curl_setopt(
                     $handle,
                     CURLOPT_HEADERFUNCTION,
-                    static function (CurlHandle $handle, string $line) use (&$rawHeaders): int {
-                        $rawHeaders .= $line;
-
-                        return strlen($line);
-                    },
+                    static fn (CurlHandle $handle, string $line): int => $headerCollector->write($line),
                 );
                 curl_setopt(
                     $handle,
@@ -164,11 +167,17 @@ class HttpClient
                         throw new HttpException('Response body exceeds the maximum allowed size.');
                     }
 
+                    if ($headerCollector->exceeded()) {
+                        throw new HttpException('Response headers exceed the maximum allowed size.');
+                    }
+
                     $error = curl_error($handle);
                     throw new HttpException("cURL error: {$error}");
                 }
 
                 $statusCode = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
+
+                $rawHeaders = $headerCollector->headers();
 
                 $location = self::redirectLocation($rawHeaders);
 

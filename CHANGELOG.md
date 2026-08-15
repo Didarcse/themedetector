@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Production-domain canonical SEO metadata.
 - Outbound HTTP response-body size limit (5 MiB default, configurable via
   `HTTP_MAX_RESPONSE_BYTES`).
+- Outbound HTTP response-header size limit (64 KiB default, configurable via
+  `HTTP_MAX_HEADER_BYTES`). Applied per HTTP hop across both HTTP clients;
+  oversized header regions are failed closed as a transport failure.
 - Security response headers (`X-Content-Type-Options`, `Referrer-Policy`) on
   HTML and JSON responses.
 - Runtime extension declarations for `ext-curl` and `ext-json`.

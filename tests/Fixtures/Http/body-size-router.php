@@ -23,5 +23,17 @@ if (preg_match('#^/size/([0-9]+)$#', $path, $matches) === 1) {
     exit;
 }
 
+if (preg_match('#^/headers/([0-9]+)$#', $path, $matches) === 1) {
+    // Emit a response whose header region grows with N (the built-in
+    // server adds a small, fixed-overhead header block around X-Fill).
+    $bytes = (int) $matches[1];
+
+    header('X-Fill: ' . str_repeat('x', $bytes));
+
+    echo 'x';
+
+    exit;
+}
+
 header('Content-Type: text/html; charset=UTF-8');
 echo "<html><body>Body-size fixture root</body></html>\n";

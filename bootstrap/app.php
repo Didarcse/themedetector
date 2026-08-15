@@ -29,6 +29,7 @@ use App\Modules\Detection\DetectionEngine;
 use App\Modules\Detection\DetectorRegistry;
 use App\Modules\Detection\DetectorRegistryFactory;
 use App\Modules\Http\BoundedBodyCollector;
+use App\Modules\Http\BoundedHeaderCollector;
 use App\Modules\Http\Curl\NativeCurlAdapter;
 use App\Modules\Http\CurlHttpClient;
 use App\Modules\Http\HttpClient;
@@ -70,16 +71,29 @@ $maxResponseBytes = (static function (): int {
         ? (int) $value
         : BoundedBodyCollector::DEFAULT_MAX_BYTES;
 })();
+$maxHeaderBytes = (static function (): int {
+    $value = getenv('HTTP_MAX_HEADER_BYTES');
+
+    return is_string($value) && is_numeric($value) && (int) $value > 0
+        ? (int) $value
+        : BoundedHeaderCollector::DEFAULT_MAX_BYTES;
+})();
 $container->set(
     HttpClientInterface::class,
     static fn (): HttpClientInterface => new CurlHttpClient(
-        new NativeCurlAdapter(maxResponseBytes: $maxResponseBytes),
+        new NativeCurlAdapter(
+            maxResponseBytes: $maxResponseBytes,
+            maxHeaderBytes: $maxHeaderBytes,
+        ),
     ),
 );
 
 $container->set(
     HttpClient::class,
-    static fn (): HttpClient => new HttpClient(maxResponseBytes: $maxResponseBytes),
+    static fn (): HttpClient => new HttpClient(
+        maxResponseBytes: $maxResponseBytes,
+        maxHeaderBytes: $maxHeaderBytes,
+    ),
 );
 
 $container->set(
@@ -89,7 +103,8 @@ $container->set(
 
 $container->set(
     ThemeExtractorRegistry::class,
-    static fn (Container $container): ThemeExtractorRegistry => (new ThemeExtractorRegistryFactory())->create($container),
+    static fn (Container $container): ThemeExtractorRegistry =>
+        (new ThemeExtractorRegistryFactory())->create($container),
 );
 
 $container->set(
