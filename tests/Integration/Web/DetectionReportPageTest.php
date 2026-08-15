@@ -28,6 +28,10 @@ use App\Modules\Http\HttpResponse;
 use App\Modules\PluginDetection\PluginDetectionManager;
 use App\Modules\PluginDetection\PluginRegistry;
 use App\Modules\PluginDetection\PluginRegistryFactory;
+use App\Modules\TechnologyDetection\TechnologyDetector;
+use App\Modules\TechnologyDetection\TechnologyDetectionManager;
+use App\Modules\TechnologyDetection\TechnologyRegistry;
+use App\Modules\TechnologyDetection\TechnologyRegistryFactory;
 use App\Modules\ThemeExtraction\Providers\ThemeExtractionServiceProvider;
 use App\Modules\ThemeExtraction\ThemeExtractionManager;
 use App\Modules\ThemeExtraction\ThemeExtractor;
@@ -50,6 +54,7 @@ final class DetectionReportPageTest extends TestCase
     <meta name="generator" content="WordPress 6.7.1">
     <link rel="stylesheet" href="/wp-content/themes/twentytwentyfive/style.css">
     <script src="/wp-content/plugins/contact-form-7/includes/js/index.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
 <body>
     <h1>Example Blog</h1>
@@ -115,6 +120,8 @@ CSS;
         $this->assertStringContainsString('Website URL', $response->content());
         $this->assertStringContainsString('<form', $response->content());
         $this->assertStringContainsString('method="post"', $response->content());
+        $this->assertStringContainsString('REST API', $response->content());
+        $this->assertSame(1, substr_count($response->content(), 'Coming Soon'));
     }
 
     public function test_report_page_renders_detection_report(): void
@@ -139,6 +146,10 @@ CSS;
         $this->assertStringContainsString('Theme Information', $response->content());
         $this->assertStringContainsString('Theme Metadata', $response->content());
         $this->assertStringContainsString('Detected Plugins', $response->content());
+        $this->assertStringContainsString('Technologies', $response->content());
+        $this->assertStringContainsString('jQuery', $response->content());
+        $this->assertStringContainsString('JavaScript Library', $response->content());
+        $this->assertStringContainsString('3.7.1', $response->content());
         $this->assertStringContainsString('Detect Another Website', $response->content());
         $this->assertStringContainsString('Copy Report', $response->content());
     }
@@ -168,8 +179,10 @@ CSS;
         $this->assertStringContainsString('No CMS detected', $response->content());
         $this->assertStringContainsString('No theme detected', $response->content());
         $this->assertStringContainsString('No plugins detected', $response->content());
+        $this->assertStringContainsString('No technologies detected', $response->content());
         $this->assertStringNotContainsString('Theme Metadata', $response->content());
-        $this->assertStringNotContainsString('technologies detected', $response->content());
+        $this->assertStringNotContainsString('1 technology detected', $response->content());
+        $this->assertStringNotContainsString('2 technologies detected', $response->content());
     }
 
     public function test_report_page_with_minimal_theme_omits_unknown_rows_and_empty_metadata(): void
@@ -249,6 +262,12 @@ CSS;
             static fn (Container $container): PluginRegistry => (new PluginRegistryFactory())->create($container),
         );
 
+        $container->set(
+            TechnologyRegistry::class,
+            static fn (Container $container): TechnologyRegistry =>
+                (new TechnologyRegistryFactory())->create($container),
+        );
+
         $application->register(new ThemeExtractionServiceProvider());
         $application->boot();
 
@@ -286,6 +305,20 @@ CSS;
         );
 
         $container->set(
+            TechnologyDetectionManager::class,
+            static fn (Container $container): TechnologyDetectionManager => new TechnologyDetectionManager(
+                $container->get(TechnologyRegistry::class),
+            ),
+        );
+
+        $container->set(
+            TechnologyDetector::class,
+            static fn (Container $container): TechnologyDetector => new TechnologyDetector(
+                $container->get(TechnologyDetectionManager::class),
+            ),
+        );
+
+        $container->set(
             WebsiteReportAnalyzer::class,
             static fn (Container $container): WebsiteReportAnalyzer => new WebsiteReportAnalyzer(
                 $container->get(HttpClientInterface::class),
@@ -293,6 +326,7 @@ CSS;
                 $container->get(DetectionPipeline::class),
                 $container->get(ThemeExtractor::class),
                 $container->get(PluginDetectionManager::class),
+                $container->get(TechnologyDetector::class),
             ),
         );
 

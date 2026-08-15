@@ -55,6 +55,10 @@ final readonly class DetectionReport
      *                                                         result, null when
      *                                                         the analysis
      *                                                         failed.
+     * @param list<DetectedTechnology>     $technologies       The technologies
+     *                                                         detected by the
+     *                                                         Technology
+     *                                                         Detection Engine.
      * @param DetectionSummary             $summary            The normalized
      *                                                         detection
      *                                                         summary.
@@ -73,6 +77,7 @@ final readonly class DetectionReport
         private ?EngineDetectionReport $engine = null,
         private ?ThemeExtractionResult $theme = null,
         private ?PluginDetectionResult $plugin = null,
+        private array $technologies = [],
         private DetectionSummary $summary = new DetectionSummary(
             cms: '',
             cmsConfidence: 0,
@@ -142,6 +147,17 @@ final readonly class DetectionReport
     public function summary(): DetectionSummary
     {
         return $this->summary;
+    }
+
+    /**
+     * Return every technology detected by the Technology Detection Engine.
+     *
+     * @return list<DetectedTechnology> The detected technologies, empty
+     *                                  when none were identified.
+     */
+    public function technologies(): array
+    {
+        return $this->technologies;
     }
 
     /**

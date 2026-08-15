@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
+use App\Core\Container;
 use App\Modules\Detection\Core\DetectionPipeline;
 use App\Modules\Detection\DetectionContextFactory;
 use App\Modules\Detection\DetectionEngine;
@@ -21,6 +22,10 @@ use App\Modules\PluginDetection\WordPress\PluginMetadataMapper;
 use App\Modules\PluginDetection\WordPress\PluginSlugExtractor;
 use App\Modules\PluginDetection\WordPress\Rules\PluginPathRule;
 use App\Modules\PluginDetection\WordPress\WordPressPluginDetector;
+use App\Modules\TechnologyDetection\TechnologyDetectionManager;
+use App\Modules\TechnologyDetection\TechnologyDetector;
+use App\Modules\TechnologyDetection\TechnologyRegistry;
+use App\Modules\TechnologyDetection\TechnologyRegistryFactory;
 use App\Modules\ThemeExtraction\ThemeExtractor;
 use App\Modules\ThemeExtraction\ThemeExtractionManager;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistry;
@@ -63,9 +68,25 @@ Text Domain: twentytwentyfive
 */
 CSS;
 
+    private const TECHNOLOGY_HTML = <<<'HTML'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Example Blog</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.example.com/cdn-cgi/scripts/main.js"></script>
+</head>
+<body>
+    <h1>Example Blog</h1>
+</body>
+</html>
+HTML;
+
     public function test_analyze_builds_full_report(): void
     {
-        $analyzer = $this->analyzer(new FakeHttpClient(self::HOMEPAGE_HTML, self::STYLESHEET_CSS));
+        $client = new FakeHttpClient(self::HOMEPAGE_HTML, self::STYLESHEET_CSS);
+        $analyzer = $this->analyzer($client);
 
         $report = $analyzer->analyze('example.com');
 
@@ -74,6 +95,8 @@ CSS;
         $this->assertSame('https://example.com', $report->websiteInformation()->finalUrl());
         $this->assertSame(200, $report->websiteInformation()->statusCode());
         $this->assertGreaterThanOrEqual(0.0, $report->detectionTime());
+        $this->assertSame([], $report->technologies());
+        $this->assertSame(2, $client->requestCount());
 
         $this->assertTrue($report->hasDetection());
         $detection = $report->engine();
@@ -104,6 +127,49 @@ CSS;
         $this->assertNotNull($pluginMetadata);
         $this->assertSame('contact-form-7', $pluginMetadata->slug());
         $this->assertSame(30, $plugin->confidence());
+    }
+
+    public function test_analyze_runs_technology_detection(): void
+    {
+        $client = new FakeHttpClient(self::TECHNOLOGY_HTML, '');
+        $analyzer = $this->analyzer($client);
+
+        $report = $analyzer->analyze('example.com');
+
+        $this->assertFalse($report->hasError());
+
+        $technologies = $report->technologies();
+        $this->assertCount(2, $technologies);
+
+        $jquery = $technologies[0];
+        $this->assertSame('jQuery', $jquery->name());
+        $this->assertSame('JavaScript Library', $jquery->category());
+        $this->assertSame(80, $jquery->confidence());
+        $this->assertSame('3.7.1', $jquery->version());
+
+        $cloudflare = $technologies[1];
+        $this->assertSame('Cloudflare', $cloudflare->name());
+        $this->assertSame('CDN', $cloudflare->category());
+        $this->assertSame(70, $cloudflare->confidence());
+        $this->assertNull($cloudflare->version());
+
+        $this->assertSame(1, $client->requestCount());
+    }
+
+    public function test_analyzer_survives_technology_detection_failure(): void
+    {
+        $analyzer = $this->analyzer(
+            new FakeHttpClient(self::HOMEPAGE_HTML, self::STYLESHEET_CSS),
+            new TechnologyDetector(new TechnologyDetectionManager(new TechnologyRegistry())),
+        );
+
+        $report = $analyzer->analyze('example.com');
+
+        $this->assertFalse($report->hasError());
+        $this->assertSame([], $report->technologies());
+        $this->assertSame('WordPress', $report->summary()->cms());
+        $this->assertSame('Twenty Twenty-Five', $report->summary()->themeName());
+        $this->assertSame(['contact-form-7'], $report->summary()->plugins());
     }
 
     public function test_analyze_rejects_invalid_url(): void
@@ -147,8 +213,10 @@ CSS;
         $this->assertFalse($report->hasDetection());
     }
 
-    private function analyzer(HttpClientInterface $client): WebsiteReportAnalyzer
-    {
+    private function analyzer(
+        HttpClientInterface $client,
+        ?TechnologyDetector $technologyDetector = null,
+    ): WebsiteReportAnalyzer {
         $registry = new DetectorRegistry([
             new WordPressDetector(
                 [new GeneratorRule(), new ThemePathRule()],
@@ -178,18 +246,25 @@ CSS;
             ),
         );
 
+        $technologyDetector ??= new TechnologyDetector(
+            new TechnologyDetectionManager((new TechnologyRegistryFactory())->create(new Container())),
+        );
+
         return new WebsiteReportAnalyzer(
             $client,
             new DetectionContextFactory(),
             new DetectionPipeline(new DetectionEngine($registry)),
             $themeExtractor,
             new PluginDetectionManager($pluginRegistry),
+            $technologyDetector,
         );
     }
 }
 
 final class FakeHttpClient implements HttpClientInterface
 {
+    private int $requestCount = 0;
+
     public function __construct(
         private string $homepageHtml,
         private string $stylesheetCss,
@@ -198,11 +273,18 @@ final class FakeHttpClient implements HttpClientInterface
 
     public function get(string $url): HttpResponse
     {
+        $this->requestCount++;
+
         if (str_contains($url, 'style.css')) {
             return $this->response($url, $this->stylesheetCss);
         }
 
         return $this->response($url, $this->homepageHtml);
+    }
+
+    public function requestCount(): int
+    {
+        return $this->requestCount;
     }
 
     private function response(string $url, string $body): HttpResponse

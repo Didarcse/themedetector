@@ -11,7 +11,7 @@ use App\Modules\Detection\DetectionContext;
  *
  * TechnologyDetector coordinates the complete technology detection
  * workflow: it delegates detection to the TechnologyDetectionManager and
- * returns the resulting TechnologyDetectionResult.
+ * returns the resulting list of TechnologyDetectionResult instances.
  *
  * TechnologyDetector is the only class external consumers should interact
  * with for technology detection.
@@ -19,7 +19,7 @@ use App\Modules\Detection\DetectionContext;
  * Responsibilities:
  *
  * - Delegate detection to the TechnologyDetectionManager.
- * - Return the resulting TechnologyDetectionResult.
+ * - Return the resulting list of TechnologyDetectionResult instances.
  *
  * Design philosophy:
  *
@@ -53,16 +53,18 @@ final readonly class TechnologyDetector
      * Detect the technologies of the website represented by the given
      * context.
      *
-     * Delegates detection to the TechnologyDetectionManager and returns the
-     * resulting TechnologyDetectionResult. The returned result is never
-     * modified, and the given DetectionContext is never changed.
+     * Delegates detection to the TechnologyDetectionManager and returns
+     * the resulting list of TechnologyDetectionResult instances. The
+     * returned list is never modified, and the given DetectionContext is
+     * never changed.
      *
      * @param DetectionContext $context The immutable detection context
      *                                  containing the HTTP response data.
      *
-     * @return TechnologyDetectionResult The technology detection result.
+     * @return list<TechnologyDetectionResult> The technology detection
+     *                                         results.
      */
-    public function detect(DetectionContext $context): TechnologyDetectionResult
+    public function detect(DetectionContext $context): array
     {
         return $this->manager->detect($context);
     }

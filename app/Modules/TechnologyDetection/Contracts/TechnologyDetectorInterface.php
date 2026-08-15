@@ -11,14 +11,16 @@ use App\Modules\TechnologyDetection\TechnologyDetectionResult;
  * Contract for every Technology Detector implementation.
  *
  * A Technology Detector determines whether it supports the supplied
- * detection context and, if so, produces a normalized technology detection
- * result. Every detector returns the same normalized
- * TechnologyDetectionResult shape regardless of the underlying platform.
+ * detection context and, if so, produces a normalized list of technology
+ * detection results. Every detector returns the same normalized
+ * TechnologyDetectionResult shape regardless of the underlying platform,
+ * and a single detector may report several technologies (for example a
+ * page that runs multiple JavaScript libraries at once).
  *
  * Responsibilities:
  *
  * - Determine whether the detector supports the given detection context.
- * - Produce a normalized technology detection result.
+ * - Produce a normalized list of technology detection results.
  *
  * Design philosophy:
  *
@@ -38,7 +40,8 @@ use App\Modules\TechnologyDetection\TechnologyDetectionResult;
  *
  * - Every future technology detector — JavaScript libraries, analytics
  *   platforms, CDNs, and future technology categories — must implement
- *   this contract and produce a TechnologyDetectionResult.
+ *   this contract and produce a list of TechnologyDetectionResult
+ *   instances.
  *
  * The interface knows nothing about SEO, Security, Performance, or
  * Website Intelligence.
@@ -56,17 +59,20 @@ interface TechnologyDetectorInterface
     public function supports(DetectionContext $context): bool;
 
     /**
-     * Detect a technology from the given detection context.
+     * Detect technologies from the given detection context.
      *
      * The context carries the immutable HTTP response data collected by
      * the Detection Engine. Detectors translate that data into technology
      * information and perform no additional HTTP requests of their own.
+     * The returned list contains every technology this detector identified,
+     * in a deterministic order, and is empty when the detector identified
+     * no technology.
      *
      * @param DetectionContext $context The immutable detection context
      *                                  containing the HTTP response data.
      *
-     * @return TechnologyDetectionResult The normalized technology detection
-     *                                   result.
+     * @return list<TechnologyDetectionResult> The normalized technology
+     *                                          detection results.
      */
-    public function detect(DetectionContext $context): TechnologyDetectionResult;
+    public function detect(DetectionContext $context): array;
 }

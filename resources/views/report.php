@@ -10,6 +10,7 @@ $themeItems = [];
 $themeMetadataItems = [];
 $pluginNames = [];
 $extraPluginNames = [];
+$technologyItems = [];
 $mainPlugin = null;
 $themeMetadata = null;
 $score = 0;
@@ -149,6 +150,21 @@ if ($report !== null && !$report->hasError()) {
         }
     }
 
+    foreach ($report->detectedTechnologies() as $technology) {
+        $technologyItems[] = [
+            'label' => $technology->name(),
+            'value' => $technology->category(),
+            'badge' => $technology->confidence() > 0 ? $technology->confidence() . '%' : '',
+        ];
+
+        if ($technology->version() !== null && $technology->version() !== '') {
+            $technologyItems[] = [
+                'label' => 'Version',
+                'value' => $technology->version(),
+            ];
+        }
+    }
+
     $reportText = implode("\n", [
         'ThemeDetectorTool Report',
         'URL: ' . ($report->url() !== '' ? $report->url() : $url),
@@ -279,6 +295,20 @@ if ($report !== null && !$report->hasError()) {
                             <?php endif; ?>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-lg-12">
+                    <?php if ($technologyItems !== []): ?>
+                        <?= view('partials.report-card', ['title' => 'Technologies', 'items' => $technologyItems]) ?>
+                    <?php else: ?>
+                        <?= view('partials.empty-state', [
+                            'icon' => 'bi-stack',
+                            'title' => 'No technologies detected',
+                            'text' => 'We could not identify any additional JavaScript libraries, CDNs, or analytics platforms.',
+                        ]) ?>
+                    <?php endif; ?>
                 </div>
             </div>
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Api;
 
 use App\Api\ApiDetectionResponsePresenter;
+use App\Domain\DetectionReport\DetectedTechnology;
 use App\Domain\DetectionReport\DetectionError;
 use App\Domain\DetectionReport\DetectionReport;
 use App\Domain\DetectionReport\DetectionSummary;
@@ -72,6 +73,8 @@ final class ApiDetectionResponsePresenterTest extends TestCase
             'plugins' => ['contact-form-7'],
             'technologies' => [
                 ['name' => 'WordPress', 'confidence' => 55],
+                ['name' => 'jQuery', 'confidence' => 80],
+                ['name' => 'Cloudflare', 'confidence' => 70],
             ],
             'detectionConfidence' => 55,
             'detectionTimeMs' => 1234,
@@ -85,6 +88,43 @@ final class ApiDetectionResponsePresenterTest extends TestCase
         self::assertTrue($envelope['success']);
         self::assertSame($this->data(), $envelope['data']);
         self::assertSame([], $envelope['errors']);
+    }
+
+    public function test_technologies_merge_is_additive_deterministic_and_deduplicated(): void
+    {
+        $summary = new DetectionSummary(
+            cms: 'WordPress',
+            cmsConfidence: 55,
+            themeName: null,
+            themeVersion: null,
+            themeAuthor: null,
+            plugins: [],
+            detectionConfidence: 55,
+            technologies: ['WordPress', 'Cloudflare'],
+            technologyConfidences: ['WordPress' => 55, 'Cloudflare' => 70],
+            primaryTheme: null,
+        );
+
+        $report = new DetectionReport(
+            websiteInformation: new WebsiteInformation(
+                url: 'https://example.com',
+                finalUrl: 'https://example.com/',
+                statusCode: 200,
+            ),
+            summary: $summary,
+            technologies: [
+                new DetectedTechnology('Cloudflare', 'CDN', 70),
+                new DetectedTechnology('jQuery', 'JavaScript Library', 80, '3.7.1'),
+            ],
+        );
+
+        $technologies = $this->presenter->data($report)['technologies'];
+
+        self::assertSame([
+            ['name' => 'WordPress', 'confidence' => 55],
+            ['name' => 'Cloudflare', 'confidence' => 70],
+            ['name' => 'jQuery', 'confidence' => 80],
+        ], $technologies);
     }
 
     public function test_missing_theme_is_projected_as_null(): void
@@ -234,6 +274,10 @@ final class ApiDetectionResponsePresenterTest extends TestCase
             engine: $engine,
             theme: $theme,
             plugin: $plugin,
+            technologies: [
+                new DetectedTechnology('jQuery', 'JavaScript Library', 80, '3.7.1'),
+                new DetectedTechnology('Cloudflare', 'CDN', 70),
+            ],
             summary: DetectionSummary::from($engine, $theme, $plugin),
             detectionTime: 1.234,
         );

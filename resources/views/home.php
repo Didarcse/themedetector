@@ -26,7 +26,7 @@ $features = [
     ['icon' => 'bi-plug', 'title' => 'Plugin Detection', 'description' => 'Discover the active plugins and extensions running behind a site.'],
     ['icon' => 'bi-code-slash', 'title' => 'Developer Friendly', 'description' => 'Clean, documented output designed for developers and automated workflows.'],
     ['icon' => 'bi-lightning-charge', 'title' => 'Fast Detection', 'description' => 'Receive a structured report in seconds, not minutes.'],
-    ['icon' => 'bi-boxes', 'title' => 'REST API', 'description' => 'Automate theme and plugin detection in your own tools.', 'badge' => 'Coming Soon'],
+    ['icon' => 'bi-boxes', 'title' => 'REST API', 'description' => 'Automate theme and plugin detection in your own tools.', 'badge' => 'Live'],
 ];
 
 $steps = [

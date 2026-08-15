@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Services;
 
+use App\Core\Container;
 use App\Modules\Detection\Core\DetectionPipeline;
 use App\Modules\Detection\DetectionContextFactory;
 use App\Modules\Detection\DetectionEngine;
@@ -21,6 +22,9 @@ use App\Modules\PluginDetection\WordPress\PluginMetadataMapper;
 use App\Modules\PluginDetection\WordPress\PluginSlugExtractor;
 use App\Modules\PluginDetection\WordPress\Rules\PluginPathRule;
 use App\Modules\PluginDetection\WordPress\WordPressPluginDetector;
+use App\Modules\TechnologyDetection\TechnologyDetectionManager;
+use App\Modules\TechnologyDetection\TechnologyDetector;
+use App\Modules\TechnologyDetection\TechnologyRegistryFactory;
 use App\Modules\ThemeExtraction\ThemeExtractor;
 use App\Modules\ThemeExtraction\ThemeExtractionManager;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistry;
@@ -155,12 +159,17 @@ CSS;
             ),
         );
 
+        $technologyDetector = new TechnologyDetector(
+            new TechnologyDetectionManager((new TechnologyRegistryFactory())->create(new Container())),
+        );
+
         $analyzer = new WebsiteReportAnalyzer(
             $client,
             new DetectionContextFactory(),
             new DetectionPipeline(new DetectionEngine($registry)),
             $themeExtractor,
             new PluginDetectionManager($pluginRegistry),
+            $technologyDetector,
         );
 
         return new DetectionService($analyzer);

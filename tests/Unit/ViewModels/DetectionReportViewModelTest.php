@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\ViewModels;
 
+use App\Domain\DetectionReport\DetectedTechnology;
 use App\Domain\DetectionReport\DetectionError;
 use App\Domain\DetectionReport\DetectionReport;
 use App\Domain\DetectionReport\DetectionSummary;
@@ -34,10 +35,16 @@ final class DetectionReportViewModelTest extends TestCase
 {
     public function test_maps_full_report_to_view_model(): void
     {
+        $technologies = [
+            new DetectedTechnology('jQuery', 'JavaScript Library', 80, '3.7.1'),
+            new DetectedTechnology('Cloudflare', 'CDN', 70),
+        ];
+
         $report = $this->websiteReport(
             $this->detectionReport(),
             $this->themeExtractionResult(),
             $this->pluginDetectionResult(),
+            $technologies,
         );
 
         $viewModel = DetectionReportViewModel::fromReport($report, 'example.com');
@@ -61,6 +68,17 @@ final class DetectionReportViewModelTest extends TestCase
         self::assertSame(1, $viewModel->technologiesCount());
         self::assertSame(55, $viewModel->confidenceForTechnology('WordPress'));
         self::assertSame('twentytwentyfive', $viewModel->primaryTheme());
+
+        $detected = $viewModel->detectedTechnologies();
+        self::assertCount(2, $detected);
+        self::assertSame('jQuery', $detected[0]->name());
+        self::assertSame('JavaScript Library', $detected[0]->category());
+        self::assertSame(80, $detected[0]->confidence());
+        self::assertSame('3.7.1', $detected[0]->version());
+        self::assertSame('Cloudflare', $detected[1]->name());
+        self::assertSame('CDN', $detected[1]->category());
+        self::assertSame(70, $detected[1]->confidence());
+        self::assertNull($detected[1]->version());
 
         $themeMetadata = $viewModel->themeMetadata();
         self::assertNotNull($themeMetadata);
@@ -109,6 +127,7 @@ final class DetectionReportViewModelTest extends TestCase
         self::assertFalse($viewModel->hasDetection());
         self::assertSame([], $viewModel->technologies());
         self::assertSame(0, $viewModel->technologiesCount());
+        self::assertSame([], $viewModel->detectedTechnologies());
         self::assertNull($viewModel->themeMetadata());
         self::assertNull($viewModel->pluginMetadata());
     }
@@ -128,6 +147,7 @@ final class DetectionReportViewModelTest extends TestCase
         self::assertSame(0, $viewModel->cmsConfidence());
         self::assertSame(0, $viewModel->detectionConfidence());
         self::assertSame(0, $viewModel->technologiesCount());
+        self::assertSame([], $viewModel->detectedTechnologies());
         self::assertNull($viewModel->primaryTheme());
     }
 
@@ -192,10 +212,14 @@ final class DetectionReportViewModelTest extends TestCase
         );
     }
 
+    /**
+     * @param list<DetectedTechnology> $technologies
+     */
     private function websiteReport(
         EngineDetectionReport $detection,
         ThemeExtractionResult $theme,
         PluginDetectionResult $plugin,
+        array $technologies = [],
     ): DetectionReport {
         return new DetectionReport(
             websiteInformation: new WebsiteInformation(
@@ -206,6 +230,7 @@ final class DetectionReportViewModelTest extends TestCase
             engine: $detection,
             theme: $theme,
             plugin: $plugin,
+            technologies: $technologies,
             summary: DetectionSummary::from($detection, $theme, $plugin),
             detectionTime: 1.234,
         );

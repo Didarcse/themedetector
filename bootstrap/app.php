@@ -37,6 +37,10 @@ use App\Modules\Http\HttpClientInterface;
 use App\Modules\PluginDetection\PluginDetectionManager;
 use App\Modules\PluginDetection\PluginRegistry;
 use App\Modules\PluginDetection\PluginRegistryFactory;
+use App\Modules\TechnologyDetection\TechnologyDetector;
+use App\Modules\TechnologyDetection\TechnologyDetectionManager;
+use App\Modules\TechnologyDetection\TechnologyRegistry;
+use App\Modules\TechnologyDetection\TechnologyRegistryFactory;
 use App\Modules\ThemeExtraction\Providers\ThemeExtractionServiceProvider;
 use App\Modules\ThemeExtraction\ThemeExtractionManager;
 use App\Modules\ThemeExtraction\ThemeExtractor;
@@ -112,6 +116,11 @@ $container->set(
     static fn (Container $container): PluginRegistry => (new PluginRegistryFactory())->create($container),
 );
 
+$container->set(
+    TechnologyRegistry::class,
+    static fn (Container $container): TechnologyRegistry => (new TechnologyRegistryFactory())->create($container),
+);
+
 $application->register(new ThemeExtractionServiceProvider());
 
 $application->boot();
@@ -155,6 +164,20 @@ $container->set(
 );
 
 $container->set(
+    TechnologyDetectionManager::class,
+    static fn (Container $container): TechnologyDetectionManager => new TechnologyDetectionManager(
+        $container->get(TechnologyRegistry::class),
+    ),
+);
+
+$container->set(
+    TechnologyDetector::class,
+    static fn (Container $container): TechnologyDetector => new TechnologyDetector(
+        $container->get(TechnologyDetectionManager::class),
+    ),
+);
+
+$container->set(
     WebsiteReportAnalyzer::class,
     static fn (Container $container): WebsiteReportAnalyzer => new WebsiteReportAnalyzer(
         $container->get(HttpClientInterface::class),
@@ -162,6 +185,7 @@ $container->set(
         $container->get(DetectionPipeline::class),
         $container->get(ThemeExtractor::class),
         $container->get(PluginDetectionManager::class),
+        $container->get(TechnologyDetector::class),
     ),
 );
 

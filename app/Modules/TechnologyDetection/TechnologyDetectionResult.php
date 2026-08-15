@@ -31,6 +31,15 @@ use InvalidArgumentException;
  * - It contains no parsing logic and knows nothing about JavaScript
  *   libraries, analytics platforms, CDNs, or any other technology.
  *
+ * List-member semantics:
+ *
+ * - The TechnologyDetectionManager aggregates a list of results, one per
+ *   detected technology. Every result inside an aggregated list is a
+ *   positive detection: detected is true and metadata is present. The
+ *   failed result (detected = false, metadata = null, confidence = 0) is
+ *   not produced by the manager; an empty list is the canonical empty
+ *   outcome instead.
+ *
  * Future Compatibility:
  *
  * - Future technology detectors must produce this normalized result model.

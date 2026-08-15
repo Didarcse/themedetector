@@ -86,6 +86,44 @@ final class ApiV1DetectionEndpointTest extends TestCase
         ], $data);
     }
 
+    public function test_technologies_include_technology_detection_results(): void
+    {
+        $html = <<<'HTML'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Example Blog</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.example.com/cdn-cgi/scripts/main.js"></script>
+</head>
+<body>
+    <h1>Example Blog</h1>
+</body>
+</html>
+HTML;
+
+        $this->kernel = ApiTestKernel::create(homepageHtml: $html, stylesheetCss: '');
+
+        $response = $this->post('{"url":"example.com"}');
+
+        self::assertSame(200, $response->status());
+
+        $data = $this->payload($response)['data'];
+        self::assertIsArray($data);
+
+        $technologies = $data['technologies'];
+        self::assertIsArray($technologies);
+        self::assertSame([
+            ['name' => 'jQuery', 'confidence' => 80],
+            ['name' => 'Cloudflare', 'confidence' => 70],
+        ], $technologies);
+
+        self::assertArrayNotHasKey('category', $technologies[0]);
+        self::assertArrayNotHasKey('version', $technologies[0]);
+        self::assertArrayNotHasKey('vendor', $technologies[0]);
+    }
+
     public function test_repeated_requests_are_served_from_cache(): void
     {
         $this->kernel = ApiTestKernel::create();

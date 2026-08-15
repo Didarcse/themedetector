@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\TechnologyDetection;
 
 use App\Core\Container;
+use App\Modules\TechnologyDetection\Analytics\AnalyticsDetector;
+use App\Modules\TechnologyDetection\Cdn\CdnDetector;
+use App\Modules\TechnologyDetection\JavaScriptLibrary\JavaScriptLibraryDetector;
 
 /**
  * Assembles the production-ready TechnologyRegistry for the Technology
@@ -36,11 +39,9 @@ final readonly class TechnologyRegistryFactory
     /**
      * Build the fully populated TechnologyRegistry.
      *
-     * No technology detectors are shipped yet: the detection rules for the
-     * first technology categories are introduced in a dedicated step.
-     * Until then the registry is empty, and the
-     * TechnologyDetectionManager reports the missing composition point by
-     * throwing a RuntimeException when consulted.
+     * The registry is populated with the JavaScript Library, CDN, and
+     * Analytics category detectors, registered in that deterministic
+     * order. Each detector shares the same TechnologyMetadataMapper.
      *
      * @param Container $container The application dependency injection
      *                             container (kept for signature symmetry
@@ -51,6 +52,13 @@ final readonly class TechnologyRegistryFactory
      */
     public function create(Container $container): TechnologyRegistry
     {
-        return new TechnologyRegistry();
+        $mapper = new TechnologyMetadataMapper();
+
+        $registry = new TechnologyRegistry();
+        $registry->register(new JavaScriptLibraryDetector($mapper));
+        $registry->register(new CdnDetector($mapper));
+        $registry->register(new AnalyticsDetector($mapper));
+
+        return $registry;
     }
 }

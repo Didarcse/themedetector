@@ -17,15 +17,14 @@ use RuntimeException;
 /**
  * Unit tests for the TechnologyDetectionManager orchestration layer.
  *
- * Verifies the complete public contract of the class: the manager
- * delegates detection to the first registered detector that supports the
- * supplied context, stops iterating after that first supporting detector,
- * never invokes detect() on unsupported detectors, evaluates supports() in
- * registration order, returns a deterministic failed
- * TechnologyDetectionResult when no detector supports the context, and
- * throws a RuntimeException when no detector has been registered. The
- * supplied DetectionContext is never modified and the manager is
- * deterministic.
+ * Verifies the complete multi-hit public contract of the class: the
+ * manager consults every registered detector that supports the supplied
+ * context, aggregates all returned results in registration order,
+ * deduplicates them by slug (falling back to the normalized technology
+ * name) keeping the highest-confidence result, returns an empty list when
+ * no detector supports the context, and throws a RuntimeException when no
+ * detector has been registered. The supplied DetectionContext is never
+ * modified and the manager is deterministic.
  *
  * The manager is intentionally a pure orchestrator. It performs no
  * detection, no parsing, no mapping, no confidence calculation, and no
@@ -58,6 +57,27 @@ final class TechnologyDetectionManagerTest extends TestCase
     }
 
     /**
+     * Create a detected technology detection result carrying the supplied
+     * identity and confidence score.
+     *
+     * @param string      $name       The technology name.
+     * @param string|null $slug       The technology slug, null to exercise
+     *                                the normalized-name deduplication key.
+     * @param int         $confidence The confidence score (0–100).
+     *
+     * @return TechnologyDetectionResult The detected technology detection
+     *                                   result.
+     */
+    private function createResult(string $name, ?string $slug = null, int $confidence = 75): TechnologyDetectionResult
+    {
+        return new TechnologyDetectionResult(
+            detected: true,
+            metadata: new TechnologyMetadata(name: $name, slug: $slug),
+            confidence: $confidence,
+        );
+    }
+
+    /**
      * Create a mock technology detector without any configured
      * expectations.
      *
@@ -67,24 +87,6 @@ final class TechnologyDetectionManagerTest extends TestCase
     private function createDetector(): MockObject&TechnologyDetectorInterface
     {
         return $this->createMock(TechnologyDetectorInterface::class);
-    }
-
-    /**
-     * Create a detected technology detection result carrying the supplied
-     * confidence score.
-     *
-     * @param int $confidence The confidence score (0–100).
-     *
-     * @return TechnologyDetectionResult The detected technology detection
-     *                                   result.
-     */
-    private function createDetectedResult(int $confidence = 75): TechnologyDetectionResult
-    {
-        return new TechnologyDetectionResult(
-            detected: true,
-            metadata: new TechnologyMetadata(name: 'Detected Technology'),
-            confidence: $confidence,
-        );
     }
 
     /**
@@ -107,174 +109,208 @@ final class TechnologyDetectionManagerTest extends TestCase
     }
 
     /**
-     * Verify that the manager returns the TechnologyDetectionResult
-     * produced by the first supporting detector.
+     * Verify that every supporting detector is consulted.
      *
-     * Detectors that do not support the context must be skipped and the
-     * first detector that does support it must be delegated to.
+     * In the multi-hit contract the manager must delegate to every
+     * registered detector that supports the context, never stopping after
+     * the first one.
      */
-    public function test_returns_result_from_first_supporting_detector(): void
+    public function test_consults_every_supporting_detector(): void
     {
         $context = $this->createContext();
-        $expected = $this->createDetectedResult();
-
-        $unsupported = $this->createDetector();
-        $unsupported->expects(self::once())
-            ->method('supports')
-            ->with(self::identicalTo($context))
-            ->willReturn(false);
-        $unsupported->expects(self::never())
-            ->method('detect');
-
-        $supporting = $this->createDetector();
-        $supporting->expects(self::once())
-            ->method('supports')
-            ->with(self::identicalTo($context))
-            ->willReturn(true);
-        $supporting->expects(self::once())
-            ->method('detect')
-            ->with(self::identicalTo($context))
-            ->willReturn($expected);
-
-        $manager = new TechnologyDetectionManager(
-            $this->createRegistry([$unsupported, $supporting]),
-        );
-        $returned = $manager->detect($context);
-
-        self::assertSame($expected, $returned);
-    }
-
-    /**
-     * Verify that the manager stops iterating after the first supporting
-     * detector.
-     *
-     * Detectors registered after the first supporting detector must never
-     * be consulted: neither supports() nor detect() may be invoked on
-     * them.
-     */
-    public function test_stops_iterating_after_first_supporting_detector(): void
-    {
-        $context = $this->createContext();
-        $expected = $this->createDetectedResult();
-
-        $supporting = $this->createDetector();
-        $supporting->expects(self::once())
-            ->method('supports')
-            ->willReturn(true);
-        $supporting->expects(self::once())
-            ->method('detect')
-            ->willReturn($expected);
-
-        $neverConsulted = $this->createDetector();
-        $neverConsulted->expects(self::never())
-            ->method('supports');
-        $neverConsulted->expects(self::never())
-            ->method('detect');
-
-        $manager = new TechnologyDetectionManager(
-            $this->createRegistry([$supporting, $neverConsulted]),
-        );
-        $returned = $manager->detect($context);
-
-        self::assertSame($expected, $returned);
-    }
-
-    /**
-     * Verify that the manager never invokes detect() on unsupported
-     * detectors.
-     *
-     * A detector whose supports() returns false must only ever be asked
-     * whether it supports the context and must never be delegated to.
-     */
-    public function test_never_invokes_detect_on_unsupported_detectors(): void
-    {
-        $context = $this->createContext();
-        $expected = $this->createDetectedResult();
-
-        $unsupported = $this->createDetector();
-        $unsupported->expects(self::once())
-            ->method('supports')
-            ->with(self::identicalTo($context))
-            ->willReturn(false);
-        $unsupported->expects(self::never())
-            ->method('detect');
-
-        $supporting = $this->createDetector();
-        $supporting->expects(self::once())
-            ->method('supports')
-            ->with(self::identicalTo($context))
-            ->willReturn(true);
-        $supporting->expects(self::once())
-            ->method('detect')
-            ->with(self::identicalTo($context))
-            ->willReturn($expected);
-
-        $manager = new TechnologyDetectionManager(
-            $this->createRegistry([$unsupported, $supporting]),
-        );
-        $manager->detect($context);
-    }
-
-    /**
-     * Verify that the manager evaluates supports() in registration order.
-     *
-     * When a detector that supports the context is registered after an
-     * unsupported detector, the supporting detector is only ever consulted
-     * after the unsupported one. The invocation sequence is recorded
-     * explicitly.
-     */
-    public function test_evaluates_supports_in_registration_order(): void
-    {
-        $context = $this->createContext();
-        $expected = $this->createDetectedResult();
-        $order = [];
+        $resultA = $this->createResult('Technology A', 'tech-a');
+        $resultB = $this->createResult('Technology B', 'tech-b');
 
         $detectorA = $this->createDetector();
         $detectorA->expects(self::once())
             ->method('supports')
-            ->willReturnCallback(
-                static function () use (&$order): bool {
-                    $order[] = 'A';
-
-                    return false;
-                },
-            );
+            ->with(self::identicalTo($context))
+            ->willReturn(true);
+        $detectorA->expects(self::once())
+            ->method('detect')
+            ->with(self::identicalTo($context))
+            ->willReturn([$resultA]);
 
         $detectorB = $this->createDetector();
         $detectorB->expects(self::once())
             ->method('supports')
-            ->willReturnCallback(
-                static function () use (&$order): bool {
-                    $order[] = 'B';
-
-                    return true;
-                },
-            );
+            ->with(self::identicalTo($context))
+            ->willReturn(true);
         $detectorB->expects(self::once())
             ->method('detect')
-            ->willReturn($expected);
+            ->with(self::identicalTo($context))
+            ->willReturn([$resultB]);
+
+        $manager = new TechnologyDetectionManager(
+            $this->createRegistry([$detectorA, $detectorB]),
+        );
+        $returned = $manager->detect($context);
+
+        self::assertSame([$resultA, $resultB], $returned);
+    }
+
+    /**
+     * Verify that the aggregated results preserve registration order.
+     *
+     * Results collected from detectors registered later must appear after
+     * results collected from detectors registered earlier.
+     */
+    public function test_preserves_registration_order_before_dedup(): void
+    {
+        $context = $this->createContext();
+        $resultA = $this->createResult('Technology A', 'tech-a');
+        $resultB = $this->createResult('Technology B', 'tech-b');
+        $resultC = $this->createResult('Technology C', 'tech-c');
+
+        $detectorA = $this->createDetector();
+        $detectorA->method('supports')->willReturn(true);
+        $detectorA->method('detect')->willReturn([$resultA]);
+
+        $detectorB = $this->createDetector();
+        $detectorB->method('supports')->willReturn(true);
+        $detectorB->method('detect')->willReturn([$resultB]);
 
         $detectorC = $this->createDetector();
-        $detectorC->expects(self::never())
-            ->method('supports');
+        $detectorC->method('supports')->willReturn(true);
+        $detectorC->method('detect')->willReturn([$resultC]);
 
         $manager = new TechnologyDetectionManager(
             $this->createRegistry([$detectorA, $detectorB, $detectorC]),
         );
         $returned = $manager->detect($context);
 
-        self::assertSame(['A', 'B'], $order);
-        self::assertSame($expected, $returned);
+        self::assertSame([$resultA, $resultB, $resultC], $returned);
     }
 
     /**
-     * Verify that a deterministic failed TechnologyDetectionResult is
-     * returned when no detector supports the supplied context.
+     * Verify that multiple results produced by a single detector are
+     * aggregated.
+     *
+     * A detector reports every technology it identified; all of them must
+     * appear in the aggregated list.
+     */
+    public function test_aggregates_multiple_results_from_detectors(): void
+    {
+        $context = $this->createContext();
+        $resultA = $this->createResult('Technology A', 'tech-a');
+        $resultB = $this->createResult('Technology B', 'tech-b');
+        $resultC = $this->createResult('Technology C', 'tech-c');
+
+        $detectorA = $this->createDetector();
+        $detectorA->method('supports')->willReturn(true);
+        $detectorA->method('detect')->willReturn([$resultA, $resultB]);
+
+        $detectorB = $this->createDetector();
+        $detectorB->method('supports')->willReturn(true);
+        $detectorB->method('detect')->willReturn([$resultC]);
+
+        $manager = new TechnologyDetectionManager(
+            $this->createRegistry([$detectorA, $detectorB]),
+        );
+        $returned = $manager->detect($context);
+
+        self::assertSame([$resultA, $resultB, $resultC], $returned);
+    }
+
+    /**
+     * Verify that a duplicate slug keeps the highest-confidence result.
+     *
+     * Two detectors report the same technology slug; the higher-confidence
+     * result must win and occupy the first occurrence position.
+     */
+    public function test_duplicate_slug_keeps_highest_confidence(): void
+    {
+        $context = $this->createContext();
+        $weaker = $this->createResult('jQuery', 'jquery', 50);
+        $stronger = $this->createResult('jQuery', 'jquery', 80);
+
+        $detectorA = $this->createDetector();
+        $detectorA->method('supports')->willReturn(true);
+        $detectorA->method('detect')->willReturn([$weaker]);
+
+        $detectorB = $this->createDetector();
+        $detectorB->method('supports')->willReturn(true);
+        $detectorB->method('detect')->willReturn([$stronger]);
+
+        $manager = new TechnologyDetectionManager(
+            $this->createRegistry([$detectorA, $detectorB]),
+        );
+        $returned = $manager->detect($context);
+
+        self::assertCount(1, $returned);
+        self::assertSame($stronger, $returned[0]);
+        self::assertSame(80, $returned[0]->confidence());
+    }
+
+    /**
+     * Verify that the normalized technology name is used as the fallback
+     * deduplication key when no slug is present.
+     *
+     * Results without a slug must be deduplicated case-insensitively and
+     * on trimmed surrounding whitespace.
+     */
+    public function test_normalized_name_fallback_dedup(): void
+    {
+        $context = $this->createContext();
+        $weaker = $this->createResult('jQuery', null, 40);
+        $stronger = $this->createResult(' jquery ', null, 90);
+
+        $detectorA = $this->createDetector();
+        $detectorA->method('supports')->willReturn(true);
+        $detectorA->method('detect')->willReturn([$weaker]);
+
+        $detectorB = $this->createDetector();
+        $detectorB->method('supports')->willReturn(true);
+        $detectorB->method('detect')->willReturn([$stronger]);
+
+        $manager = new TechnologyDetectionManager(
+            $this->createRegistry([$detectorA, $detectorB]),
+        );
+        $returned = $manager->detect($context);
+
+        self::assertCount(1, $returned);
+        self::assertSame($stronger, $returned[0]);
+        self::assertSame(90, $returned[0]->confidence());
+    }
+
+    /**
+     * Verify that a duplicate with a lower confidence is discarded.
+     *
+     * When the second occurrence of a deduplication key carries a lower
+     * confidence than the first, the first result must be kept unchanged.
+     */
+    public function test_duplicate_with_lower_confidence_is_discarded(): void
+    {
+        $context = $this->createContext();
+        $stronger = $this->createResult('React', 'react', 90);
+        $weaker = $this->createResult('React', 'react', 40);
+
+        $detectorA = $this->createDetector();
+        $detectorA->method('supports')->willReturn(true);
+        $detectorA->method('detect')->willReturn([$stronger]);
+
+        $detectorB = $this->createDetector();
+        $detectorB->method('supports')->willReturn(true);
+        $detectorB->method('detect')->willReturn([$weaker]);
+
+        $manager = new TechnologyDetectionManager(
+            $this->createRegistry([$detectorA, $detectorB]),
+        );
+        $returned = $manager->detect($context);
+
+        self::assertCount(1, $returned);
+        self::assertSame($stronger, $returned[0]);
+        self::assertSame(90, $returned[0]->confidence());
+    }
+
+    /**
+     * Verify that an empty list is returned when no detector supports the
+     * supplied context.
      *
      * Every registered detector is consulted, none supports the context,
-     * and the manager falls back to its canonical failed result.
+     * and the manager falls back to the canonical empty outcome.
      */
-    public function test_returns_deterministic_failed_result_when_none_support(): void
+    public function test_returns_empty_list_when_no_detector_supports(): void
     {
         $context = $this->createContext();
 
@@ -297,36 +333,47 @@ final class TechnologyDetectionManagerTest extends TestCase
         $manager = new TechnologyDetectionManager(
             $this->createRegistry([$detectorA, $detectorB]),
         );
-        $result = $manager->detect($context);
+        $returned = $manager->detect($context);
 
-        self::assertInstanceOf(TechnologyDetectionResult::class, $result);
-        self::assertFalse($result->isDetected());
-        self::assertNull($result->metadata());
-        self::assertSame(0, $result->confidence());
+        self::assertSame([], $returned);
     }
 
     /**
-     * Verify that the failed result carries detected = false, metadata =
-     * null, and confidence = 0.
+     * Verify that the manager never invokes detect() on unsupported
+     * detectors.
      *
-     * The failed result is the canonical empty outcome of the manager and
-     * its three fields must always have their documented defaults.
+     * A detector whose supports() returns false is only ever asked whether
+     * it supports the context and is never delegated to.
      */
-    public function test_failed_result_contains_expected_values(): void
+    public function test_never_invokes_detect_on_unsupported_detectors(): void
     {
+        $context = $this->createContext();
+        $result = $this->createResult('Technology A', 'tech-a');
+
         $unsupported = $this->createDetector();
         $unsupported->expects(self::once())
             ->method('supports')
+            ->with(self::identicalTo($context))
             ->willReturn(false);
+        $unsupported->expects(self::never())
+            ->method('detect');
+
+        $supporting = $this->createDetector();
+        $supporting->expects(self::once())
+            ->method('supports')
+            ->with(self::identicalTo($context))
+            ->willReturn(true);
+        $supporting->expects(self::once())
+            ->method('detect')
+            ->with(self::identicalTo($context))
+            ->willReturn([$result]);
 
         $manager = new TechnologyDetectionManager(
-            $this->createRegistry([$unsupported]),
+            $this->createRegistry([$unsupported, $supporting]),
         );
-        $result = $manager->detect($this->createContext());
+        $returned = $manager->detect($context);
 
-        self::assertFalse($result->isDetected());
-        self::assertNull($result->metadata());
-        self::assertSame(0, $result->confidence());
+        self::assertSame([$result], $returned);
     }
 
     /**
@@ -334,8 +381,8 @@ final class TechnologyDetectionManagerTest extends TestCase
      * has been registered.
      *
      * An empty registry is a composition error, not a detection outcome:
-     * the manager must report it instead of silently returning a failed
-     * result.
+     * the manager must report it instead of silently returning an empty
+     * list.
      */
     public function test_throws_when_no_detectors_registered(): void
     {
@@ -351,13 +398,13 @@ final class TechnologyDetectionManagerTest extends TestCase
      * Verify that the manager never modifies the supplied DetectionContext.
      *
      * The exact same context instance must be passed to supports() and
-     * detect() of the supporting detector, and its immutable values must
+     * detect() of every supporting detector, and its immutable values must
      * remain unchanged after the manager returns.
      */
     public function test_never_modifies_supplied_context(): void
     {
         $context = $this->createContext('<html>vendor-script.js</html>');
-        $expected = $this->createDetectedResult();
+        $result = $this->createResult('Technology A', 'tech-a');
 
         $supporting = $this->createDetector();
         $supporting->expects(self::once())
@@ -367,7 +414,7 @@ final class TechnologyDetectionManagerTest extends TestCase
         $supporting->expects(self::once())
             ->method('detect')
             ->with(self::identicalTo($context))
-            ->willReturn($expected);
+            ->willReturn([$result]);
 
         $manager = new TechnologyDetectionManager(
             $this->createRegistry([$supporting]),
@@ -386,42 +433,41 @@ final class TechnologyDetectionManagerTest extends TestCase
     /**
      * Verify that the manager is deterministic.
      *
-     * Repeated detections with the same context return the same result,
-     * and a registry whose detectors never support the context always
-     * yields the canonical failed result regardless of how many times it
-     * is consulted.
+     * Repeated detections with the same context return the identical
+     * aggregated list, including the deduplication outcome.
      */
     public function test_manager_is_deterministic(): void
     {
         $context = $this->createContext();
-        $expected = $this->createDetectedResult();
+        $resultA = $this->createResult('Technology A', 'tech-a');
+        $resultB = $this->createResult('Technology B', 'tech-b');
 
         $supporting = $this->createDetector();
         $supporting->method('supports')->willReturn(true);
-        $supporting->method('detect')->willReturn($expected);
+        $supporting->method('detect')->willReturn([$resultA, $resultB]);
 
         $manager = new TechnologyDetectionManager(
             $this->createRegistry([$supporting]),
         );
 
-        self::assertSame($expected, $manager->detect($context));
-        self::assertSame($expected, $manager->detect($context));
+        self::assertSame([$resultA, $resultB], $manager->detect($context));
+        self::assertSame([$resultA, $resultB], $manager->detect($context));
 
-        $noneSupporting = $this->createDetector();
-        $noneSupporting->method('supports')->willReturn(false);
+        $duplicate = $this->createResult('Technology A', 'tech-a', 60);
+        $overlapping = $this->createDetector();
+        $overlapping->method('supports')->willReturn(true);
+        $overlapping->method('detect')->willReturn([$duplicate]);
 
-        $failedManager = new TechnologyDetectionManager(
-            $this->createRegistry([$noneSupporting]),
+        $dedupManager = new TechnologyDetectionManager(
+            $this->createRegistry([$supporting, $overlapping]),
         );
 
-        $first = $failedManager->detect($context);
-        $second = $failedManager->detect($context);
+        $first = $dedupManager->detect($context);
+        $second = $dedupManager->detect($context);
 
-        self::assertFalse($first->isDetected());
-        self::assertFalse($second->isDetected());
-        self::assertNull($first->metadata());
-        self::assertNull($second->metadata());
-        self::assertSame(0, $first->confidence());
-        self::assertSame(0, $second->confidence());
+        self::assertSame($first, $second);
+        self::assertCount(2, $first);
+        self::assertSame($resultA, $first[0]);
+        self::assertSame($resultB, $first[1]);
     }
 }

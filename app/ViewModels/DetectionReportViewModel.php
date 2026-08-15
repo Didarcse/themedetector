@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ViewModels;
 
+use App\Domain\DetectionReport\DetectedTechnology;
 use App\Domain\DetectionReport\DetectionReport;
 use App\Modules\PluginDetection\PluginMetadata;
 use App\Modules\ThemeExtraction\ThemeMetadata;
@@ -44,6 +45,10 @@ final readonly class DetectionReportViewModel
      *                                                       report order.
      * @param array<string, int>      $technologyConfidences Technology-to-
      *                                                       confidence map.
+     * @param list<DetectedTechnology> $detectedTechnologies  The technologies
+     *                                                       identified by the
+     *                                                       Technology
+     *                                                       Detection Engine.
      */
     private function __construct(
         private string $submittedUrl,
@@ -63,6 +68,7 @@ final readonly class DetectionReportViewModel
         private array $technologies,
         private array $technologyConfidences,
         private ?string $primaryTheme,
+        private array $detectedTechnologies,
         private ?ThemeMetadata $themeMetadata,
         private int $themeConfidence,
         private ?PluginMetadata $pluginMetadata,
@@ -107,6 +113,7 @@ final readonly class DetectionReportViewModel
             technologies: $summary->technologies(),
             technologyConfidences: $summary->technologyConfidences(),
             primaryTheme: $summary->primaryTheme(),
+            detectedTechnologies: $report->technologies(),
             themeMetadata: $report->themeMetadata(),
             themeConfidence: $report->themeConfidence(),
             pluginMetadata: $report->pluginMetadata(),
@@ -301,6 +308,17 @@ final readonly class DetectionReportViewModel
     public function confidenceForTechnology(string $technology): int
     {
         return $this->technologyConfidences[$technology] ?? 0;
+    }
+
+    /**
+     * Return every technology identified by the Technology Detection Engine.
+     *
+     * @return list<DetectedTechnology> The detected technologies, empty
+     *                                  when none were identified.
+     */
+    public function detectedTechnologies(): array
+    {
+        return $this->detectedTechnologies;
     }
 
     /**

@@ -151,11 +151,27 @@ final readonly class ApiDetectionResponsePresenter
         $theme = $report->themeMetadata();
 
         $technologies = [];
+        $seen = [];
 
         foreach ($summary->technologies() as $technology) {
+            $seen[$technology] = true;
             $technologies[] = [
                 'name' => $technology,
                 'confidence' => $summary->confidenceForTechnology($technology),
+            ];
+        }
+
+        foreach ($report->technologies() as $detected) {
+            $name = $detected->name();
+
+            if (isset($seen[$name])) {
+                continue;
+            }
+
+            $seen[$name] = true;
+            $technologies[] = [
+                'name' => $name,
+                'confidence' => $detected->confidence(),
             ];
         }
 

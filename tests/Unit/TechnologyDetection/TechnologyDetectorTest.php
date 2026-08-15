@@ -18,9 +18,9 @@ use PHPUnit\Framework\TestCase;
  * Unit tests for the TechnologyDetector facade.
  *
  * Verifies the complete public contract of the class: it delegates
- * detection to the TechnologyDetectionManager, returns the exact
- * TechnologyDetectionResult produced by the manager, passes the exact
- * DetectionContext through, and never modifies either. The facade is
+ * detection to the TechnologyDetectionManager, returns the exact list of
+ * TechnologyDetectionResult instances produced by the manager, passes the
+ * exact DetectionContext through, and never modifies either. The facade is
  * intentionally a thin delegation layer.
  *
  * The tests are behaviour-driven, fast, independent, and deterministic.
@@ -58,7 +58,7 @@ final class TechnologyDetectorTest extends TestCase
     {
         return new TechnologyDetectionResult(
             detected: true,
-            metadata: new TechnologyMetadata(name: 'Detected Technology'),
+            metadata: new TechnologyMetadata(name: 'Detected Technology', slug: 'detected-technology'),
             confidence: 90,
         );
     }
@@ -82,37 +82,40 @@ final class TechnologyDetectorTest extends TestCase
     }
 
     /**
-     * Create a mock technology detector without any configured
-     * expectations.
+     * Create a mock technology detector that supports every context and
+     * returns the supplied list of results.
+     *
+     * @param list<TechnologyDetectionResult> $results The results returned
+     *                                                 by the detector.
      *
      * @return MockObject&TechnologyDetectorInterface The mock detector
      *                                                instance.
      */
-    private function createSupportingDetector(TechnologyDetectionResult $result): MockObject&TechnologyDetectorInterface
+    private function createSupportingDetector(array $results): MockObject&TechnologyDetectorInterface
     {
         $detector = $this->createMock(TechnologyDetectorInterface::class);
         $detector->method('supports')->willReturn(true);
-        $detector->method('detect')->willReturn($result);
+        $detector->method('detect')->willReturn($results);
 
         return $detector;
     }
 
     /**
      * Verify that the facade delegates detection to the manager and
-     * returns the exact result produced by the pipeline.
+     * returns the exact list produced by the pipeline.
      *
      * The facade must forward the exact DetectionContext instance and
-     * return the manager result unchanged.
+     * return the manager result list unchanged.
      */
-    public function test_delegates_detection_to_manager_and_returns_result(): void
+    public function test_delegates_detection_to_manager_and_returns_list(): void
     {
         $context = $this->createContext();
         $expected = $this->createDetectedResult();
 
-        $detector = $this->createDetector($this->createSupportingDetector($expected));
+        $detector = $this->createDetector($this->createSupportingDetector([$expected]));
         $returned = $detector->detect($context);
 
-        self::assertSame($expected, $returned);
+        self::assertSame([$expected], $returned);
     }
 
     /**
@@ -135,7 +138,7 @@ final class TechnologyDetectorTest extends TestCase
         $supporting->expects(self::once())
             ->method('detect')
             ->with(self::identicalTo($context))
-            ->willReturn($expected);
+            ->willReturn([$expected]);
 
         $detector = $this->createDetector($supporting);
         $detector->detect($context);
