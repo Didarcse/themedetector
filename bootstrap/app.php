@@ -28,6 +28,7 @@ use App\Modules\Detection\DetectionContextFactory;
 use App\Modules\Detection\DetectionEngine;
 use App\Modules\Detection\DetectorRegistry;
 use App\Modules\Detection\DetectorRegistryFactory;
+use App\Modules\Http\BoundedBodyCollector;
 use App\Modules\Http\Curl\NativeCurlAdapter;
 use App\Modules\Http\CurlHttpClient;
 use App\Modules\Http\HttpClient;
@@ -62,16 +63,23 @@ $container = $application->container();
  * idempotent service providers never overwrite them with empty registries.
  */
 
+$maxResponseBytes = (static function (): int {
+    $value = getenv('HTTP_MAX_RESPONSE_BYTES');
+
+    return is_string($value) && is_numeric($value) && (int) $value > 0
+        ? (int) $value
+        : BoundedBodyCollector::DEFAULT_MAX_BYTES;
+})();
 $container->set(
     HttpClientInterface::class,
     static fn (): HttpClientInterface => new CurlHttpClient(
-        new NativeCurlAdapter(),
+        new NativeCurlAdapter(maxResponseBytes: $maxResponseBytes),
     ),
 );
 
 $container->set(
     HttpClient::class,
-    static fn (): HttpClient => new HttpClient(),
+    static fn (): HttpClient => new HttpClient(maxResponseBytes: $maxResponseBytes),
 );
 
 $container->set(

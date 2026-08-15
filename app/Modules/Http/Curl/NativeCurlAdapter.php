@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Http\Curl;
 
+use App\Modules\Http\BoundedBodyCollector;
 use App\Modules\Http\Exceptions\HttpClientException;
 use CurlHandle;
 
@@ -15,18 +16,25 @@ use CurlHandle;
  * and returns an immutable CurlResponse. It contains no HTTP response
  * parsing, no business logic, and no CMS knowledge.
  *
+ * The response body is streamed through a BoundedBodyCollector write
+ * callback instead of being buffered unbounded by CURLOPT_RETURNTRANSFER:
+ * libcurl aborts the transfer as soon as the collected body would exceed
+ * the configured maximum, so a hostile or pathological remote site can
+ * never force the process to hold an unbounded response in memory. Header
+ * bytes are captured separately through CURLOPT_HEADERFUNCTION.
+ *
  * Responsibilities:
  *
  * - Validate the supplied URL before any network activity.
  * - Perform a single HTTP GET request via cURL with a fixed, safe option
  *   set.
- * - Collect the original URL, final URL, status code, header size, and
- *   response body of the raw cURL exchange.
- * - Split the raw cURL exchange into a raw header region and a body using
- *   CURLINFO_HEADER_SIZE.
+ * - Collect the original URL, final URL, status code, raw header region,
+ *   and response body of the raw cURL exchange.
+ * - Enforce a bounded maximum response-body size while streaming, failing
+ *   closed when the limit is exceeded.
  * - Return the exchange as an immutable CurlResponse.
  * - Throw HttpClientException on invalid URLs, cURL initialization,
- *   option, or execution failures.
+ *   option, execution, or body-size-limit failures.
  * - Always close the cURL handle via try/finally; never leak resources.
  *
  * Design philosophy:
@@ -43,6 +51,19 @@ use CurlHandle;
 final readonly class NativeCurlAdapter implements CurlAdapterInterface
 {
     /**
+     * Create a native cURL adapter.
+     *
+     * @param int $maxResponseBytes The maximum response-body size in
+     *                              bytes. Responses larger than this are
+     *                              failed closed and reported as a
+     *                              transport failure.
+     */
+    public function __construct(
+        private int $maxResponseBytes = BoundedBodyCollector::DEFAULT_MAX_BYTES,
+    ) {
+    }
+
+    /**
      * Execute a single HTTP GET request and return the raw exchange.
      *
      * @param string $url       The absolute URL to request.
@@ -52,7 +73,8 @@ final readonly class NativeCurlAdapter implements CurlAdapterInterface
      * @return CurlResponse The immutable raw cURL exchange.
      *
      * @throws HttpClientException On invalid URL, cURL initialization,
-     *                             option, or execution failure.
+     *                             option, execution, or body-size-limit
+     *                             failure.
      */
     public function execute(string $url, int $timeout, string $userAgent): CurlResponse
     {
@@ -64,14 +86,21 @@ final readonly class NativeCurlAdapter implements CurlAdapterInterface
             throw new HttpClientException('Failed to initialize cURL.');
         }
 
+        $collector = new BoundedBodyCollector($this->maxResponseBytes);
+        $rawHeaders = '';
+
         try {
-            if (curl_setopt_array($handle, $this->options($url, $timeout, $userAgent)) === false) {
+            $options = $this->options($url, $timeout, $userAgent, $collector, $rawHeaders);
+
+            if (curl_setopt_array($handle, $options) === false) {
                 throw new HttpClientException('Failed to configure cURL options.');
             }
 
-            $rawExchange = curl_exec($handle);
+            if (curl_exec($handle) === false) {
+                if ($collector->exceeded()) {
+                    throw new HttpClientException('Response body exceeds the maximum allowed size.');
+                }
 
-            if (!is_string($rawExchange)) {
                 $error = curl_error($handle);
 
                 if ($error === '') {
@@ -81,7 +110,7 @@ final readonly class NativeCurlAdapter implements CurlAdapterInterface
                 throw new HttpClientException('cURL error: ' . $error);
             }
 
-            return $this->createResponse($url, $rawExchange, $handle);
+            return $this->createResponse($url, $collector, $rawHeaders, $handle);
         } finally {
             curl_close($handle);
         }
@@ -109,16 +138,37 @@ final readonly class NativeCurlAdapter implements CurlAdapterInterface
      * every redirect target against the SSRF URL policy, the allowed
      * protocols are restricted to HTTP and HTTPS for both the initial
      * request and any redirects (defense-in-depth), SSL verification is
-     * enabled, and all supported content encodings are accepted.
+     * enabled, and all supported content encodings are accepted. The body
+     * is streamed through the bounded collector and the headers through a
+     * separate header callback, so no unbounded response is ever buffered.
+     *
+     * @param string                $url          The URL to request.
+     * @param int                   $timeout      The request timeout.
+     * @param string                $userAgent    The user agent.
+     * @param BoundedBodyCollector  $collector    The bounded body writer.
+     * @param string                $rawHeaders   The captured raw header
+     *                                            region, filled by the
+     *                                            header callback.
      *
      * @return array<int, mixed>
      */
-    private function options(string $url, int $timeout, string $userAgent): array
-    {
+    private function options(
+        string $url,
+        int $timeout,
+        string $userAgent,
+        BoundedBodyCollector $collector,
+        string &$rawHeaders,
+    ): array {
         return [
             CURLOPT_URL             => $url,
-            CURLOPT_RETURNTRANSFER  => true,
-            CURLOPT_HEADER          => true,
+            CURLOPT_RETURNTRANSFER  => false,
+            CURLOPT_HEADER          => false,
+            CURLOPT_HEADERFUNCTION  => static function (CurlHandle $handle, string $line) use (&$rawHeaders): int {
+                $rawHeaders .= $line;
+
+                return strlen($line);
+            },
+            CURLOPT_WRITEFUNCTION   => static fn (CurlHandle $handle, string $chunk): int => $collector->write($chunk),
             CURLOPT_FOLLOWLOCATION  => false,
             CURLOPT_MAXREDIRS       => 10,
             CURLOPT_TIMEOUT         => $timeout,
@@ -135,32 +185,31 @@ final readonly class NativeCurlAdapter implements CurlAdapterInterface
     }
 
     /**
-     * Build an immutable CurlResponse from a raw cURL exchange.
+     * Build an immutable CurlResponse from a streamed cURL exchange.
      *
-     * The raw exchange is split at the cURL-reported header size: the
-     * header region is stored verbatim and the remaining bytes form the
-     * body. No parsing or transformation is applied; the raw header
-     * string is returned exactly as received.
+     * The raw header region is taken verbatim from the header callback and
+     * the body from the bounded collector; no parsing or transformation is
+     * applied. The header region is returned exactly as received.
      *
-     * @param string     $originalUrl The URL that was originally requested.
-     * @param string     $rawExchange The raw cURL exchange (headers and body).
-     * @param CurlHandle $handle      The active cURL handle providing response metadata.
+     * @param string                $originalUrl The URL that was originally requested.
+     * @param BoundedBodyCollector  $collector   The bounded body collector holding the body.
+     * @param string                $rawHeaders  The captured raw header region.
+     * @param CurlHandle            $handle      The active cURL handle providing response metadata.
      *
      * @return CurlResponse The immutable raw cURL exchange.
      */
     private function createResponse(
         string $originalUrl,
-        string $rawExchange,
+        BoundedBodyCollector $collector,
+        string $rawHeaders,
         CurlHandle $handle,
     ): CurlResponse {
-        $headerSize = (int) curl_getinfo($handle, CURLINFO_HEADER_SIZE);
-
         return new CurlResponse(
             originalUrl: $originalUrl,
             finalUrl: (string) curl_getinfo($handle, CURLINFO_EFFECTIVE_URL),
             statusCode: (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE),
-            rawHeaders: substr($rawExchange, 0, $headerSize),
-            body: substr($rawExchange, $headerSize),
+            rawHeaders: $rawHeaders,
+            body: $collector->body(),
         );
     }
 }

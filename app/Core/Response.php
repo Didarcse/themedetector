@@ -23,7 +23,11 @@ final class Response
         $this->content = $content;
         $this->status = $status;
         $this->headers = array_merge(
-            ['Content-Type' => 'text/html; charset=UTF-8'],
+            [
+                'Content-Type' => 'text/html; charset=UTF-8',
+                'X-Content-Type-Options' => 'nosniff',
+                'Referrer-Policy' => 'strict-origin-when-cross-origin',
+            ],
             $headers,
         );
     }

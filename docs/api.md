@@ -100,19 +100,37 @@ Both variables may be set; the accepted set is the union.
 
 ## 4. Request validation
 
-The validator is strict and deterministic.
+The validator is strict and deterministic. The body is decoded with
+`json_decode(..., true)` and then checked in two stages: first whether it is a
+JSON object at all, then whether that object satisfies the `url` schema. This
+produces four distinct classes of validation outcome:
 
-| Condition                                  | Status | Error code          |
-|--------------------------------------------|--------|---------------------|
-| Body is not valid JSON                      | 400    | `invalid_json`      |
-| `Content-Type` is not `application/json`    | 415    | `unsupported_media_type` |
-| Body is not a JSON object                   | 422    | `body_not_object`   |
-| Body contains an unknown field              | 422    | `unknown_field`     |
-| `url` field missing                         | 422    | `url_required`      |
-| `url` is not a string                       | 422    | `url_invalid_type`  |
-| `url` is empty after trimming               | 422    | `url_empty`         |
-| `url` exceeds 2048 characters               | 422    | `url_too_long`      |
-| `url` is not a valid http(s) URL            | 422    | `url_invalid_format`|
+1. **Malformed JSON** — the body cannot be decoded as JSON at all.
+2. **Non-object JSON** — the body decodes to a JSON array, a scalar, or `null`.
+3. **Object missing `url`** — the body is a genuine JSON object but has no
+   `url` member.
+4. **Object with an invalid `url`** — the object has a `url` member that fails
+   one of the schema checks below.
+
+| Condition                                               | Status | Error code          |
+|---------------------------------------------------------|--------|---------------------|
+| `Content-Type` is not `application/json`                | 415    | `unsupported_media_type` |
+| Body is malformed JSON (cannot be decoded)              | 400    | `invalid_json`      |
+| Body decodes to a non-object JSON value (`null`, a scalar, or a JSON array) | 422 | `body_not_object` |
+| Body is an empty JSON object `{}`                       | 422    | `body_not_object`   |
+| Body contains an unknown field                          | 422    | `unknown_field`     |
+| Object has no `url` member                              | 422    | `url_required`      |
+| `url` is not a string                                   | 422    | `url_invalid_type`  |
+| `url` is empty after trimming                           | 422    | `url_empty`         |
+| `url` exceeds 2048 characters                           | 422    | `url_too_long`      |
+| `url` is not a valid http(s) URL                        | 422    | `url_invalid_format`|
+
+> **Empty object vs missing `url`.** Because the body is decoded as a PHP
+> array, the empty JSON object `{}` becomes an empty array, which the
+> validator treats as a non-object body and rejects with `422 body_not_object`
+> — not `url_required`. The `url_required` code is only produced when the body
+> is a genuine object with at least one named field that lacks the `url`
+> member, e.g. `{"foo":"bar"}` yields both `unknown_field` and `url_required`.
 
 > A scheme-less value is normalised before validation (see §2) by inferring
 > `https://`, mirroring the existing analyzer. Only `http` and `https` schemes
@@ -271,9 +289,9 @@ Retry-After: 812
 
 A separate in-flight guard caps concurrent detections (`API_MAX_CONCURRENT`,
 default `10`, `0` disables). When at capacity the request is rejected with
-`429 rate_limited` and message "The server is busy." The guard recovers from
-crashed requests via a bounded TTL and fails closed when its counter file cannot
-be opened.
+`429 rate_limited` and message "The server is busy. Try again later." The guard
+recovers from crashed requests via a bounded TTL and fails closed when its
+counter file cannot be opened.
 
 ---
 
@@ -281,7 +299,9 @@ be opened.
 
 Successful reports are cached per normalised URL:
 
-- **TTL:** `API_CACHE_TTL` seconds (default `300`, 5 minutes; range 5–15 min).
+- **TTL:** `API_CACHE_TTL` seconds (default `300`, 5 minutes). Values are used
+  as configured; the 5–15 minute span is a recommended operating range, not an
+  enforced limit.
 - **Key:** `sha256(schemaVersion + ":" + normalisedUrl)` — no user-controlled
   value reaches the filesystem path, so path traversal is impossible.
 - **Scope:** the schema version is baked into every key, so a schema change

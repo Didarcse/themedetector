@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0aa0cdc861f1b33666dcdbe86601581d",
+    "content-hash": "1b77fd53a3091b75e56bf58cc68bc52f",
     "packages": [
         {
             "name": "graham-campbell/result-type",
@@ -2460,6 +2460,8 @@
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
+        "ext-dom": "*",
+        "ext-filter": "*",
         "php": ">=8.2"
     },
     "platform-dev": {},

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Http;
 
+use CurlHandle;
+
 /**
  * Lightweight HTTP client for performing GET requests.
  *
@@ -20,8 +22,16 @@ class HttpClient
 
     private ?UrlHostPolicy $urlPolicy = null;
 
-    public function __construct(?UrlHostPolicy $urlPolicy = null)
-    {
+    /**
+     * @param int $maxResponseBytes The maximum response-body size in
+     *                              bytes. Responses larger than this are
+     *                              failed closed and reported as a
+     *                              transport failure.
+     */
+    public function __construct(
+        ?UrlHostPolicy $urlPolicy = null,
+        private int $maxResponseBytes = BoundedBodyCollector::DEFAULT_MAX_BYTES,
+    ) {
         $this->urlPolicy = $urlPolicy;
     }
 
@@ -121,22 +131,44 @@ class HttpClient
         while (true) {
             $handle = CurlFactory::create();
 
+            $collector = new BoundedBodyCollector($this->maxResponseBytes);
+            $rawHeaders = '';
+
             try {
                 curl_setopt($handle, CURLOPT_URL, $currentUrl);
                 curl_setopt($handle, CURLOPT_TIMEOUT, $this->remainingTimeout($deadline));
 
-                $exchange = curl_exec($handle);
+                // Stream the body through the bounded collector instead of
+                // buffering an unbounded response via CURLOPT_RETURNTRANSFER.
+                curl_setopt($handle, CURLOPT_RETURNTRANSFER, false);
+                curl_setopt($handle, CURLOPT_HEADER, false);
+                curl_setopt(
+                    $handle,
+                    CURLOPT_HEADERFUNCTION,
+                    static function (CurlHandle $handle, string $line) use (&$rawHeaders): int {
+                        $rawHeaders .= $line;
 
-                if (!is_string($exchange)) {
+                        return strlen($line);
+                    },
+                );
+                curl_setopt(
+                    $handle,
+                    CURLOPT_WRITEFUNCTION,
+                    static fn (CurlHandle $handle, string $chunk): int => $collector->write($chunk),
+                );
+
+                $result = curl_exec($handle);
+
+                if ($result === false) {
+                    if ($collector->exceeded()) {
+                        throw new HttpException('Response body exceeds the maximum allowed size.');
+                    }
+
                     $error = curl_error($handle);
                     throw new HttpException("cURL error: {$error}");
                 }
 
-                $info = curl_getinfo($handle);
-
-                $rawHeaders = substr($exchange, 0, $info['header_size']);
-                $body = substr($exchange, $info['header_size']);
-                $statusCode = (int) $info['http_code'];
+                $statusCode = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
 
                 $location = self::redirectLocation($rawHeaders);
 
@@ -147,7 +179,7 @@ class HttpClient
                             finalUrl: $currentUrl,
                             statusCode: $statusCode,
                             headers: self::parseHeaders($rawHeaders),
-                            body: $body,
+                            body: $collector->body(),
                         );
                     }
 
@@ -162,7 +194,7 @@ class HttpClient
                     finalUrl: $currentUrl,
                     statusCode: $statusCode,
                     headers: self::parseHeaders($rawHeaders),
-                    body: $body,
+                    body: $collector->body(),
                 );
             } finally {
                 curl_close($handle);

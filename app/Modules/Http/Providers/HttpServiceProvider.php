@@ -6,6 +6,7 @@ namespace App\Modules\Http\Providers;
 
 use App\Core\Container;
 use App\Core\Contracts\ServiceProviderInterface;
+use App\Modules\Http\BoundedBodyCollector;
 use App\Modules\Http\Curl\NativeCurlAdapter;
 use App\Modules\Http\CurlHttpClient;
 use App\Modules\Http\HttpClientInterface;
@@ -57,8 +58,25 @@ final class HttpServiceProvider implements ServiceProviderInterface
         $container->set(
             HttpClientInterface::class,
             fn (Container $container): HttpClientInterface => new CurlHttpClient(
-                new NativeCurlAdapter(),
+                new NativeCurlAdapter(maxResponseBytes: self::maxResponseBytes()),
             ),
         );
+    }
+
+    /**
+     * Resolve the configured maximum response-body size in bytes.
+     *
+     * Reads the HTTP_MAX_RESPONSE_BYTES environment variable when it holds
+     * a positive integer and falls back to the collector default otherwise.
+     *
+     * @return int The maximum response-body size in bytes.
+     */
+    private static function maxResponseBytes(): int
+    {
+        $value = getenv('HTTP_MAX_RESPONSE_BYTES');
+
+        return is_string($value) && is_numeric($value) && (int) $value > 0
+            ? (int) $value
+            : BoundedBodyCollector::DEFAULT_MAX_BYTES;
     }
 }

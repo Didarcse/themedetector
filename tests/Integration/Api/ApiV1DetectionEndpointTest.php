@@ -333,6 +333,47 @@ final class ApiV1DetectionEndpointTest extends TestCase
         self::assertStringNotContainsString('WebsiteReportAnalyzer', $rendered);
     }
 
+    public function test_api_responses_carry_security_headers(): void
+    {
+        $this->kernel = ApiTestKernel::create();
+
+        $response = $this->post('{"url":"example.com"}');
+
+        self::assertSame(200, $response->status());
+        self::assertSame('application/json; charset=UTF-8', $response->headers()['Content-Type'] ?? null);
+        self::assertSame('nosniff', $response->headers()['X-Content-Type-Options']);
+        self::assertSame(
+            'strict-origin-when-cross-origin',
+            $response->headers()['Referrer-Policy'],
+        );
+    }
+
+    public function test_response_body_size_limit_failures_never_leak_to_api_clients(): void
+    {
+        $this->kernel = ApiTestKernel::create(
+            client: $this->throwingClient('Response body exceeds the maximum allowed size.'),
+        );
+
+        $response = $this->post('{"url":"https://huge.example.com"}');
+
+        self::assertSame(200, $response->status());
+
+        $payload = $this->payload($response);
+        self::assertFalse($payload['success']);
+
+        $rendered = json_encode($payload);
+        self::assertIsString($rendered);
+        self::assertStringNotContainsString('maximum allowed size', $rendered);
+
+        $errors = $payload['errors'];
+
+        self::assertIsArray($errors);
+        self::assertSame([
+            'code' => 'transport_failure',
+            'message' => 'The website could not be reached. Please check the URL and try again.',
+        ], $errors[0]);
+    }
+
     public function test_the_web_detect_route_still_works_alongside_the_api(): void
     {
         $this->kernel = ApiTestKernel::create();
@@ -402,12 +443,16 @@ final class ApiV1DetectionEndpointTest extends TestCase
         return $code;
     }
 
-    private function throwingClient(): HttpClientInterface
+    private function throwingClient(string $message = 'host unreachable'): HttpClientInterface
     {
-        return new class implements HttpClientInterface {
+        return new class ($message) implements HttpClientInterface {
+            public function __construct(private readonly string $message)
+            {
+            }
+
             public function get(string $url): HttpResponse
             {
-                throw new HttpException('host unreachable');
+                throw new HttpException($this->message);
             }
         };
     }

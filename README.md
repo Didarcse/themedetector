@@ -69,7 +69,7 @@ fabricated version or author).
 
 - PHP 8.2 or higher
 - Composer 2.x
-- `ext-json` and `ext-curl` (HTTP fetching, JSON handling)
+- `ext-json`, `ext-curl`, `ext-dom`, and `ext-filter` (JSON handling, HTTP fetching, HTML parsing, URL validation)
 - Apache/Nginx with `mod_rewrite` enabled, or the PHP built-in server for development
 
 ## Installation
@@ -91,9 +91,10 @@ php -r "echo bin2hex(random_bytes(32));"
 ```
 
 > The application runs with zero configuration in development — the Kernel v1
-> framework is configuration-less and does not read `.env`. `.env.example` is
-> provided as a reference for future infrastructure wiring only; `APP_KEY` is
-> not required to run the application.
+> framework is configuration-less. When present, `.env` is loaded to configure
+> the public API (API keys and rate-limit defaults, see `docs/api.md`); without
+> it the API runs open and rate limited per IP. `APP_KEY` is not required to
+> run the application.
 
 ## Directory Structure
 
@@ -152,6 +153,12 @@ Kernel and dispatches `routes/web.php`: the homepage accepts a website URL, the
 loading page runs the client-side progress flow, and the report page shows the
 detected CMS, theme, and plugins with confidence scores.
 
+> **Note:** the PHP built-in server (`php -S ... -t public/`) serves only
+> existing files and the front controller, so dot-path SEO artifacts such as
+> `/robots.txt` and `/sitemap.xml` may return 404 when requested directly in
+> this local setup. Those routes are handled by the front controller and work
+> correctly under the documented Apache/Nginx routing used in production.
+
 ## Deployment
 
 The web server **document root must point to `public/`**. The application entry
@@ -182,7 +189,7 @@ config, tests, storage) must not be web-accessible.
 
 - **Permissions** — `storage/` must be writable by the web server user for
   application logs.
-- **Requirements** — PHP 8.2+, `ext-curl`, `ext-json`, and Composer 2.x.
+- **Requirements** — PHP 8.2+, `ext-curl`, `ext-json`, `ext-dom`, `ext-filter`, and Composer 2.x.
 
 ## Known Limitations
 
@@ -198,8 +205,8 @@ config, tests, storage) must not be web-accessible.
   sites or sites built with generic frameworks may not be detected.
 - **URL scheme.** A missing scheme is inferred as HTTPS; HTTP URLs must be
   entered explicitly. Redirects are followed up to a maximum of 10.
-- **Not yet shipped.** PDF export and public REST API access are planned but not
-  yet available.
+- **PDF export not yet shipped.** PDF export is planned but not yet available.
+  A public REST API is live — see `docs/api.md` for the v1 contract.
 
 ## Running PHPUnit
 
