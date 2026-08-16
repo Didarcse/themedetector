@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-08-16
+
+### Added
+
+#### Technology Detection Engine v1
+
+- Technology Detection v1 — a new engine that inspects the already-fetched HTML
+  and final URL for the technologies running on a site.
+- JavaScript library detection: jQuery, jQuery UI, React, Vue, Angular,
+  Bootstrap, Alpine.js, and Lodash.
+- CDN detection: Cloudflare, CloudFront, jsDelivr, and unpkg.
+- Analytics detection: Google Analytics, Google Tag Manager, Meta Pixel,
+  Plausible, Matomo, Hotjar, and Microsoft Clarity.
+- Multi-hit aggregation: every supporting category detector is consulted and
+  its results are aggregated, then deduplicated deterministically by slug
+  (highest confidence wins).
+- Technologies report card on the Detection Report page.
+- Public API v1 `technologies` field now also includes the detected JavaScript
+  libraries, CDNs, and analytics platforms. The API schema stays `v1`.
+- Fail-open behavior: a Technology Detection failure never breaks the report;
+  it degrades to an empty technology list.
+- No additional outbound HTTP requests: the engine runs against the existing
+  `DetectionContext` only.
+
+### Quality Gates
+
+- PHPUnit 11: 1391 tests, 3530 assertions passing.
+- PHPStan Level MAX: 0 errors.
+- PHP_CodeSniffer PSR-12: 0 errors.
+- Composer audit: 0 security advisories.
+
+## [2.1.1] - 2026-08-15
+
+### Added
+
+- Outbound HTTP response-header size limit (64 KiB default, configurable via
+  `HTTP_MAX_HEADER_BYTES`). Applied per HTTP hop across both HTTP clients;
+  oversized header regions are failed closed as a transport failure.
+
+### Quality Gates
+
+- PHPUnit 11: 1270 tests, 3101 assertions passing.
+- PHPStan Level MAX: 0 errors.
+- PHP_CodeSniffer PSR-12: 0 errors.
+- Composer audit: 0 security advisories.
+
+## [2.1.0] - 2026-08-15
+
 ### Added
 
 - Public Detection API v1 — a single `POST /api/v1/detect` endpoint exposing the
@@ -20,9 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Production-domain canonical SEO metadata.
 - Outbound HTTP response-body size limit (5 MiB default, configurable via
   `HTTP_MAX_RESPONSE_BYTES`).
-- Outbound HTTP response-header size limit (64 KiB default, configurable via
-  `HTTP_MAX_HEADER_BYTES`). Applied per HTTP hop across both HTTP clients;
-  oversized header regions are failed closed as a transport failure.
 - Security response headers (`X-Content-Type-Options`, `Referrer-Policy`) on
   HTML and JSON responses.
 - Runtime extension declarations for `ext-curl` and `ext-json`.
@@ -38,7 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Quality Gates
 
-- PHPUnit 11: 1270 tests, 3101 assertions passing.
+- PHPUnit 11: 1254 tests, 3058 assertions passing.
 - PHPStan Level MAX: 0 errors.
 - PHP_CodeSniffer PSR-12: 0 errors.
 - Composer audit: 0 security advisories.
@@ -177,6 +222,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/WebsiteAnalysisArchitecture.md`,
   `docs/WebsiteIntelligenceEngineArchitecture.md`).
 
-[Unreleased]: https://github.com/Didarcse/themedetector/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/Didarcse/themedetector/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/Didarcse/themedetector/compare/v2.1.1...v2.2.0
+[2.1.1]: https://github.com/Didarcse/themedetector/compare/v2.1.0...v2.1.1
+[2.1.0]: https://github.com/Didarcse/themedetector/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/Didarcse/themedetector/compare/v0.1.0...v2.0.0
 [0.1.0]: https://github.com/Didarcse/themedetector/releases/tag/v0.1.0

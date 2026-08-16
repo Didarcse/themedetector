@@ -26,7 +26,7 @@ workflow and produces one unified, immutable result.
               ▼          ▼              ▼              ▼
         Detection   ThemeExtraction PluginDetection Technology  WebsiteIntelligence
         Engine       Engine           Engine          Engine       Engine
-        (exists)     (exists)         (future)        (future)     (future)
+        (exists)     (exists)         (future)        (exists)     (future)
               │          │              │              │              │
               └──────────┴──────────────┴──────────────┴───────────────┘
                           │
@@ -74,7 +74,7 @@ app/
 │   ├── Detection/                         # Detection Engine (existing)
 │   ├── ThemeExtraction/                   # Theme Extraction Engine (existing)
 │   ├── PluginDetection/                   # Plugin Detection Engine (future)
-│   ├── Technology/                        # Technology Detection Engine (future)
+│   ├── TechnologyDetection/                # Technology Detection Engine v1 (shipped)
 │   ├── Analysis/                          # Website Analysis Engine (this module)
 │   └── ...
 └── ...
@@ -131,7 +131,7 @@ app/Modules/Analysis/
 | `app/Modules/Analysis/Serializers`| `App\Modules\Analysis\Serializers`    |
 | `app/Modules/Analysis/Exceptions` | `App\Modules\Analysis\Exceptions`     |
 | `app/Modules/PluginDetection`     | `App\Modules\PluginDetection`          |
-| `app/Modules/Technology`          | `App\Modules\Technology`               |
+| `app/Modules/TechnologyDetection`  | `App\Modules\TechnologyDetection`       |
 
 ---
 
@@ -304,8 +304,10 @@ WebsiteAnalysisResult
 3. **Theme Extraction** — delegates to the existing Theme Extraction Engine
    (`ThemeExtractorRegistry` + `ThemeExtractionManager`).
 4. **Plugin Detection** — delegates to the future Plugin Detection Engine.
-5. **Technology Detection** — delegates to the future Technology Engine
-   (CDNs, frameworks, analytics, hosting signals).
+5. **Technology Detection** — delegates to the shipped Technology Detection
+   Engine (`TechnologyDetector` + `TechnologyDetectionManager`), which detects
+   JavaScript libraries, CDNs, and analytics platforms from the existing
+   context.
 6. **Website Intelligence** — SEO, Security, Performance, Accessibility.
 
 ### Failure semantics
@@ -380,7 +382,7 @@ interface AnalysisStageInterface
 | `CmsDetectionStage`      | `DetectionManager`                             | `DetectionResult`        | Exists    |
 | `ThemeExtractionStage`   | `ThemeExtractionManager`                       | `ThemeExtractionResult`  | Exists    |
 | `PluginDetectionStage`   | `PluginDetectionEngine`                        | `PluginDetectionResult`  | Future    |
-| `TechnologyDetectionStage`| `TechnologyEngine`                            | `TechnologyResult`       | Future    |
+| `TechnologyDetectionStage`| `TechnologyDetector`                           | `TechnologyDetectionResult` | Exists    |
 | `IntelligenceStage`      | `WebsiteIntelligenceEngine`                    | `WebsiteIntelligenceReport` | Future |
 
 Stage adapters live in the Analysis module and are the **only** place that
@@ -400,20 +402,16 @@ app/Modules/PluginDetection/
 │   └── PluginDetectorInterface.php # plugin detection contract
 └── Providers/
     └── PluginDetectionServiceProvider.php
-
-app/Modules/Technology/
-├── TechnologyEngine.php            # facade
-├── TechnologyManager.php           # orchestrator
-├── TechnologyDetectorRegistry.php  # registry of TechnologyDetectorInterface
-├── TechnologyResult.php            # value object
-├── Contracts/
-│   └── TechnologyDetectorInterface.php
-└── Providers/
-    └── TechnologyServiceProvider.php
 ```
 
-Both follow the exact pattern established by Detection and Theme Extraction:
-registry + manager + facade + idempotent provider.
+> **Technology Detection** is shipped (v2.2.0) at
+> `app/Modules/TechnologyDetection/`: facade `TechnologyDetector`, orchestrator
+> `TechnologyDetectionManager`, registry `TechnologyRegistry` (composed by
+> `TechnologyRegistryFactory`), and the immutable value objects
+> `TechnologyDetectionResult` / `TechnologyMetadata`.
+
+The future engine above follows the exact pattern established by Detection and
+Theme Extraction: registry + manager + facade + idempotent provider.
 
 ---
 
@@ -473,7 +471,7 @@ Registrations:
 | `CmsDetectionStage`              | `DetectionManager`                                    |
 | `ThemeExtractionStage`           | `ThemeExtractionManager`                              |
 | `PluginDetectionStage`           | `PluginDetectionEngine` (future contract)             |
-| `TechnologyDetectionStage`       | `TechnologyEngine` (future contract)                  |
+| `TechnologyDetectionStage`       | `TechnologyDetector` (shipped)                        |
 | `IntelligenceStage`              | `WebsiteIntelligenceEngine`                           |
 | `WebsiteIntelligenceEngine`      | registered analyzers (Seo, Security, Performance, Accessibility) |
 | `WebsiteAnalysisManager`         | ordered stage list                                    |
@@ -490,7 +488,8 @@ dependency order:
 2. `DetectionServiceProvider` (existing)
 3. `ThemeExtractionServiceProvider` (existing)
 4. `PluginDetectionServiceProvider` (future)
-5. `TechnologyServiceProvider` (future)
+5. Technology Detection engine wiring (shipped — container wiring in
+   `bootstrap/app.php`)
 6. `WebsiteAnalysisServiceProvider`
 
 Registration is lazy: nothing is constructed until first resolution.
@@ -503,7 +502,7 @@ WebsiteAnalysisManager ─────────────► WebsiteAnalyze
 CmsDetectionStage     ─ DetectionManager
 ThemeExtractionStage  ─ ThemeExtractionManager
 PluginDetectionStage  ─ PluginDetectionEngine        (future)
-TechnologyDetectionStage ─ TechnologyEngine          (future)
+TechnologyDetectionStage ─ TechnologyDetector         (shipped)
 IntelligenceStage     ─ WebsiteIntelligenceEngine
 WebsiteIntelligenceEngine ─ SeoAnalyzer
                           ─ SecurityAnalyzer

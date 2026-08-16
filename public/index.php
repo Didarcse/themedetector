@@ -13,7 +13,7 @@ declare(strict_types=1);
 use App\Core\Request;
 
 define('KERNEL_VERSION', '1.0.0');
-define('APP_VERSION', '2.0.0');
+define('APP_VERSION', '2.2.0');
 define('APP_NAME', 'ThemeDetectorTool');
 define('FRAMEWORK_NAME', 'Kernel Framework');
 

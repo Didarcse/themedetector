@@ -37,7 +37,7 @@ versions are not security-supported.
 | Version            | Supported          |
 |--------------------|--------------------|
 | `main` (latest)    | Yes                |
-| `2.1.1`            | Yes                |
+| `2.2.0`            | Yes                |
 | `0.1.x` and older  | No                 |
 
 ## Scope

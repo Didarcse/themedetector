@@ -17,7 +17,7 @@ $platforms = [
     ['icon' => 'bi-puzzle', 'title' => 'Joomla', 'description' => 'Open-source content management system'],
     ['icon' => 'bi-layers', 'title' => 'TYPO3', 'description' => 'Enterprise-grade content management'],
     ['icon' => 'bi-layout-text-window', 'title' => 'Squarespace', 'description' => 'All-in-one website platform'],
-    ['icon' => 'bi-gear', 'title' => 'Technology Detection', 'description' => 'Deeper stack and technology detection for every platform.', 'badge' => 'Coming Soon'],
+    ['icon' => 'bi-gear', 'title' => 'Technology Detection', 'description' => 'Deeper stack and technology detection for every platform.', 'badge' => 'Live'],
 ];
 
 $features = [

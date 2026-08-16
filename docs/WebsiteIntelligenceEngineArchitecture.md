@@ -22,8 +22,8 @@ responsibilities, relationships, and rules only.
 - Expose exactly one public entry point for full-site intelligence: `WebsiteIntelligenceEngine`.
 - Coordinate every detection module in a fixed, deterministic order.
 - Aggregate each module's normalized output into one immutable report.
-- Remain open for future modules (Technology, Analytics, CDN, Security, SEO,
-  Performance) with **no breaking API changes**.
+- Remain open for future modules (Analytics, CDN, Security, SEO, Performance)
+  with **no breaking API changes**.
 
 ### Non-goals
 
@@ -73,9 +73,9 @@ is a pure orchestrator: it routes, collects, and assembles.
    ┌────────────┬─────────────┬─────────────┬─────────────┬────────────┐
    ▼            ▼             ▼             ▼             ▼            ▼
 CmsDetection  ThemeDetection ThemeExtraction PluginDetection  ...future modules
-   Module       Module         Module         Module       (Technology, Analytics,
-   │            │              │              │             CDN, Security, SEO,
-   ▼            ▼              ▼              ▼             Performance)
+   Module       Module         Module         Module       (Analytics, CDN,
+    │            │              │              │             Security, SEO,
+    ▼            ▼              ▼              ▼             Performance)
 WebsiteModuleResult  ·  WebsiteModuleResult  ·  WebsiteModuleResult
                               │
                               ▼
@@ -146,7 +146,7 @@ app/Modules/WebsiteIntelligence/
     ├── ThemeDetectionModule.php            # wraps the Theme Detection engine
     ├── ThemeExtractionModule.php           # wraps the Theme Extraction engine
     ├── PluginDetectionModule.php           # wraps the Plugin Detection engine
-    ├── TechnologyDetectionModule.php       # future
+    ├── TechnologyDetectionModule.php       # wraps the shipped Technology Detection engine
     ├── AnalyticsDetectionModule.php        # future
     ├── CdnDetectionModule.php              # future
     ├── SecurityDetectionModule.php         # future
@@ -482,7 +482,7 @@ Verifies observable behaviour:
 
 ## 11. Future Extensibility
 
-- **New detection module** (Technology, Analytics, CDN, Security, SEO, Performance):
+- **New detection module** (Analytics, CDN, Security, SEO, Performance):
   implement `WebsiteModuleInterface` under `Modules/`, register it at composition
   time. No changes to the engine, manager, registry, or report.
 - **New module output field:** extend `WebsiteModuleResult::extra()` or bump the

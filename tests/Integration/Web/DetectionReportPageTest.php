@@ -121,7 +121,11 @@ CSS;
         $this->assertStringContainsString('<form', $response->content());
         $this->assertStringContainsString('method="post"', $response->content());
         $this->assertStringContainsString('REST API', $response->content());
-        $this->assertSame(1, substr_count($response->content(), 'Coming Soon'));
+        $this->assertSame(0, substr_count($response->content(), 'Coming Soon'));
+        $this->assertSame(
+            2,
+            substr_count($response->content(), 'text-bg-secondary">Live</span>'),
+        );
     }
 
     public function test_report_page_renders_detection_report(): void
