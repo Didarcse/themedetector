@@ -26,7 +26,7 @@ workflow and produces one unified, immutable result.
               ▼          ▼              ▼              ▼
         Detection   ThemeExtraction PluginDetection Technology  WebsiteIntelligence
         Engine       Engine           Engine          Engine       Engine
-        (exists)     (exists)         (future)        (exists)     (future)
+        (exists)     (exists)         (exists)        (exists)     (future)
               │          │              │              │              │
               └──────────┴──────────────┴──────────────┴───────────────┘
                           │
@@ -73,7 +73,7 @@ app/
 │   ├── Http/                              # Transport (existing)
 │   ├── Detection/                         # Detection Engine (existing)
 │   ├── ThemeExtraction/                   # Theme Extraction Engine (existing)
-│   ├── PluginDetection/                   # Plugin Detection Engine (future)
+│   ├── PluginDetection/                   # Plugin Detection Engine (existing)
 │   ├── TechnologyDetection/                # Technology Detection Engine v1 (shipped)
 │   ├── Analysis/                          # Website Analysis Engine (this module)
 │   └── ...
@@ -303,7 +303,8 @@ WebsiteAnalysisResult
    (`DetectorRegistry` + `DetectionManager`).
 3. **Theme Extraction** — delegates to the existing Theme Extraction Engine
    (`ThemeExtractorRegistry` + `ThemeExtractionManager`).
-4. **Plugin Detection** — delegates to the future Plugin Detection Engine.
+4. **Plugin Detection** — delegates to the shipped Plugin Detection Engine
+   (`PluginDetectionManager` + `PluginRegistry`).
 5. **Technology Detection** — delegates to the shipped Technology Detection
    Engine (`TechnologyDetector` + `TechnologyDetectionManager`), which detects
    JavaScript libraries, CDNs, and analytics platforms from the existing
@@ -470,7 +471,7 @@ Registrations:
 |----------------------------------|-------------------------------------------------------|
 | `CmsDetectionStage`              | `DetectionManager`                                    |
 | `ThemeExtractionStage`           | `ThemeExtractionManager`                              |
-| `PluginDetectionStage`           | `PluginDetectionEngine` (future contract)             |
+| `PluginDetectionStage`           | `PluginDetectionManager` (shipped)                    |
 | `TechnologyDetectionStage`       | `TechnologyDetector` (shipped)                        |
 | `IntelligenceStage`              | `WebsiteIntelligenceEngine`                           |
 | `WebsiteIntelligenceEngine`      | registered analyzers (Seo, Security, Performance, Accessibility) |
@@ -487,7 +488,8 @@ dependency order:
 1. `HttpServiceProvider` (existing)
 2. `DetectionServiceProvider` (existing)
 3. `ThemeExtractionServiceProvider` (existing)
-4. `PluginDetectionServiceProvider` (future)
+4. Plugin Detection engine wiring (shipped — container wiring in
+   `bootstrap/app.php`)
 5. Technology Detection engine wiring (shipped — container wiring in
    `bootstrap/app.php`)
 6. `WebsiteAnalysisServiceProvider`
@@ -501,7 +503,7 @@ HttpClientInterface ────────────────► WebsiteA
 WebsiteAnalysisManager ─────────────► WebsiteAnalyzer
 CmsDetectionStage     ─ DetectionManager
 ThemeExtractionStage  ─ ThemeExtractionManager
-PluginDetectionStage  ─ PluginDetectionEngine        (future)
+PluginDetectionStage  ─ PluginDetectionManager      (shipped)
 TechnologyDetectionStage ─ TechnologyDetector         (shipped)
 IntelligenceStage     ─ WebsiteIntelligenceEngine
 WebsiteIntelligenceEngine ─ SeoAnalyzer

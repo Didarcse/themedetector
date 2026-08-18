@@ -37,7 +37,7 @@ final readonly class ClarityRule extends AbstractTechnologyRule
 
     private const STRONG_ASSET_PATTERN = '/(?:https?:)?\/\/(?:www\.)?clarity\.ms\/tag\//i';
 
-    private const INLINE_PATTERN = '/(?:window\s*\.\s*)?clarity\s*\(/i';
+    private const INLINE_PATTERN = '/(?:window\s*\.\s*)?clarity\s*\(\s*[\'"]/i';
 
     private const ASSET_CONFIDENCE = 80;
 

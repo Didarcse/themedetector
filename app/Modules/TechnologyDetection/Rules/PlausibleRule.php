@@ -37,7 +37,7 @@ final readonly class PlausibleRule extends AbstractTechnologyRule
 
     private const STRONG_ASSET_PATTERN = '/(?:https?:)?\/\/plausible\.io\/js\//i';
 
-    private const INLINE_PATTERN = '/\bplausible\s*\(/i';
+    private const INLINE_PATTERN = '/\bplausible\s*\(\s*[\'"]/i';
 
     private const ASSET_CONFIDENCE = 80;
 

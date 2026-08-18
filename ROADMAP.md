@@ -29,21 +29,20 @@ Legend: **Done** · **In progress** · **Planned**
   Enterprise WordPress plugin detection: plugin rules, slug extraction, metadata
   mapping, and immutable result value objects.
 
+- **Technology Detection** — *Done*
+  JavaScript library, CDN asset-host, and analytics/tagging detection with
+  confidence-scored rules layered on the shared `DetectionContext`, shipped as
+  part of v2.2.0 (`TechnologyDetectionManager` + registry/facade module).
+
+- **Analytics Detection** — *Done*
+  Shipped inside Technology Detection v1: Google Analytics (gtag), Google Tag
+  Manager, Meta Pixel, Plausible, Matomo, Hotjar, and Clarity rule coverage.
+
+- **CDN Detection** — *Done*
+  Shipped inside Technology Detection v1: Cloudflare, CloudFront, jsDelivr, and
+  unpkg asset-host rule coverage.
+
 ## Upcoming
-
-- **Technology Detection** — *Planned (foundation in place)*
-  The `App\Modules\TechnologyDetection` module skeleton exists
-  (`TechnologyDetectionManager`, `TechnologyRegistry`, result/metadata value
-  objects, provider); the detection rules and platform support are not yet
-  implemented.
-
-- **Analytics Detection** — *Planned*
-  Detect analytics, tracking, and tag-management providers (GA4, GTM, Meta
-  Pixel, Plausible, etc.) from script/global markers in the `DetectionContext`.
-
-- **CDN Detection** — *Planned*
-  Detect CDN and edge providers (Cloudflare, Akamai, Fastly, CloudFront, etc.)
-  from response headers and known fingerprints.
 
 - **Security Detection** — *Planned*
   Security posture signals: SSL/TLS headers, security headers (HSTS, CSP,

@@ -85,6 +85,51 @@ final class ClarityRuleTest extends TestCase
     }
 
     /**
+     * Verify that a bare (non-window-qualified) inline call matches.
+     */
+    public function test_inline_bare_signal_matches(): void
+    {
+        $html = '<script>clarity(\'consent\', true);</script>';
+
+        $result = (new ClarityRule())->evaluate($html, self::URL);
+
+        self::assertTrue($result['matched']);
+        self::assertSame(50, $result['confidence']);
+        self::assertSame('inline-global', $result['metadata']['signal']);
+    }
+
+    /**
+     * Verify that ordinary English prose never triggers a match.
+     */
+    public function test_english_prose_does_not_match(): void
+    {
+        $html = '<html><body><p>We value clarity (of thought) above all.</p></body></html>';
+
+        $result = (new ClarityRule())->evaluate($html, self::URL);
+
+        self::assertFalse($result['matched']);
+        self::assertSame(0, $result['confidence']);
+        self::assertSame([], $result['metadata']);
+    }
+
+    /**
+     * Verify that comments and JSON blobs mentioning the identifier do
+     * not trigger a match.
+     */
+    public function test_comments_and_json_mentions_do_not_match(): void
+    {
+        $html = '<html><head><script type="application/ld+json">'
+            . '{"note":"we value clarity (in reviews)"}</script></head>'
+            . '<body><!-- clarity(foo) --><p>hi</p></body></html>';
+
+        $result = (new ClarityRule())->evaluate($html, self::URL);
+
+        self::assertFalse($result['matched']);
+        self::assertSame(0, $result['confidence']);
+        self::assertSame([], $result['metadata']);
+    }
+
+    /**
      * Verify that unrelated HTML never matches.
      */
     public function test_no_match_returns_failed_result(): void
