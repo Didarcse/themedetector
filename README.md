@@ -46,7 +46,7 @@ stages.
 - **Facade-first public API** — every module exposes a single public facade
   (`WebsiteDetector`, `ThemeExtractionManager`, `PluginDetectionManager`, ...).
 - **Quality gates** — PHP 8.2, `declare(strict_types=1)`, PSR-12, PHPStan Level MAX,
-  PHPUnit 11 (1391 tests, 3530 assertions).
+  PHPUnit 11 (1397 tests, 3548 assertions).
 
 ## Theme Extraction Support
 
@@ -224,7 +224,7 @@ vendor/bin/phpunit --testsuite tests
 
 `phpunit.xml` is strict: the suite fails on warnings, notices, deprecations, risky
 tests, unexpected global state, and unexpected output. Current status:
-**OK (1391 tests, 3530 assertions)**. Benchmark classes live in `tests/Benchmark/`
+**OK (1397 tests, 3548 assertions)**. Benchmark classes live in `tests/Benchmark/`
 and are deliberately **not** part of the PHPUnit suites — run them manually with
 `php tests/Benchmark/<file>.php`.
 
@@ -285,8 +285,7 @@ Detection modules follow one shared contract (canonical spec in
 `docs/DetectionModuleArchitectureStandard.md`):
 
 1. `HttpResponse` from the **Http** module feeds the `DetectionContextFactory`,
-   which produces an immutable `DetectionContext` (url, final url, html, status,
-   headers, response time).
+   which produces an immutable `DetectionContext` (url, final url, html, status).
 2. A module **facade** delegates to a **manager**, which iterates its
    **detector registry** and lets the first supporting detector win.
 3. Detectors return immutable **result value objects** carrying raw metadata,

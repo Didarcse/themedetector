@@ -98,7 +98,7 @@ release(theme): complete Theme Extraction Engine v0.3.0 RC1
 - New or modified behavior **must** be covered by tests (unit and/or integration
   as appropriate).
 - The suite is strict and **must pass cleanly**:
-  - `composer test` → `OK (729 tests, 1310 assertions)` at the time of writing.
+  - `composer test` → `OK (1397 tests, 3548 assertions)` at the time of writing.
   - No warnings, notices, deprecations, risky tests, unexpected output, or global
     state changes (`failOn*` flags are all on).
 - Test fixtures (HTML samples) go in `tests/Fixtures/`. Benchmark runners go in
