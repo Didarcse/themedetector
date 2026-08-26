@@ -16,9 +16,9 @@ $items = $items ?? [];
                         <?= htmlspecialchars((string) $item['label'], ENT_QUOTES, 'UTF-8') ?>
                     </dt>
                     <dd class="col-sm-8 mb-2 text-break">
-                        <?php if (isset($item['link']) && (string) $item['link'] !== ''): ?>
+                        <?php if (isset($item['link']) && (string) $item['link'] !== '' && safe_href((string) $item['link']) !== ''): ?>
                             <a
-                                href="<?= htmlspecialchars((string) $item['link'], ENT_QUOTES, 'UTF-8') ?>"
+                                href="<?= htmlspecialchars(safe_href((string) $item['link']), ENT_QUOTES, 'UTF-8') ?>"
                                 target="_blank"
                                 rel="noopener"
                             ><?= htmlspecialchars((string) $item['value'], ENT_QUOTES, 'UTF-8') ?></a>

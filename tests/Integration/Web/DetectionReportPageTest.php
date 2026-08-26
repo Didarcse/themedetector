@@ -107,6 +107,33 @@ Theme Name: Minimal Theme
 */
 CSS;
 
+    private const XSS_THEME_HTML = <<<'HTML'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Malicious Blog</title>
+    <meta name="generator" content="WordPress 6.7.1">
+    <link rel="stylesheet" href="/wp-content/themes/xstheme/style.css">
+</head>
+<body>
+    <h1>Malicious Blog</h1>
+</body>
+</html>
+HTML;
+
+    private const XSS_THEME_CSS = <<<'CSS'
+/*
+Theme Name: XSS Theme
+Theme URI: javascript:alert(1)
+Author: Attacker
+Author URI: data:text/html,<script>alert(2)</script>
+License: GPL-2.0
+License URI: vbscript:MsgBox("XSS")
+Screenshot: https://example.com/screenshot.png
+*/
+CSS;
+
     public function test_home_page_renders_search_form(): void
     {
         $kernel = $this->kernel(new PageFakeHttpClient(self::HOMEPAGE_HTML, self::STYLESHEET_CSS));
@@ -216,6 +243,71 @@ CSS;
         $this->assertStringContainsString('name="robots" content="noindex, nofollow"', $response->content());
         $this->assertStringNotContainsString('rel="canonical"', $response->content());
         $this->assertStringNotContainsString('themedetector.test', $response->content());
+    }
+
+    public function test_javascript_uri_in_theme_metadata_is_not_rendered_as_href(): void
+    {
+        $kernel = $this->kernel(new PageFakeHttpClient(self::XSS_THEME_HTML, self::XSS_THEME_CSS));
+
+        $response = $kernel->handle(
+            $this->request('POST', '/detect', post: ['url' => 'example.com']),
+        );
+
+        $this->assertSame(200, $response->status());
+        $this->assertStringNotContainsString('href="javascript:', $response->content());
+    }
+
+    public function test_data_uri_in_theme_author_is_not_rendered_as_href(): void
+    {
+        $kernel = $this->kernel(new PageFakeHttpClient(self::XSS_THEME_HTML, self::XSS_THEME_CSS));
+
+        $response = $kernel->handle(
+            $this->request('POST', '/detect', post: ['url' => 'example.com']),
+        );
+
+        $this->assertSame(200, $response->status());
+        $this->assertStringNotContainsString('href="data:', $response->content());
+    }
+
+    public function test_vbscript_uri_in_license_is_not_rendered_as_href(): void
+    {
+        $kernel = $this->kernel(new PageFakeHttpClient(self::XSS_THEME_HTML, self::XSS_THEME_CSS));
+
+        $response = $kernel->handle(
+            $this->request('POST', '/detect', post: ['url' => 'example.com']),
+        );
+
+        $this->assertSame(200, $response->status());
+        $this->assertStringNotContainsString('href="vbscript:', $response->content());
+    }
+
+    public function test_valid_https_url_in_theme_metadata_remains_rendered_as_href(): void
+    {
+        $kernel = $this->kernel(new PageFakeHttpClient(self::HOMEPAGE_HTML, self::STYLESHEET_CSS));
+
+        $response = $kernel->handle(
+            $this->request('POST', '/detect', post: ['url' => 'example.com']),
+        );
+
+        $this->assertSame(200, $response->status());
+        $this->assertStringContainsString(
+            'href="https://wordpress.org/themes/twentytwentyfive/"',
+            $response->content(),
+        );
+    }
+
+    public function test_xss_theme_renders_name_and_author_as_plain_text_not_links(): void
+    {
+        $kernel = $this->kernel(new PageFakeHttpClient(self::XSS_THEME_HTML, self::XSS_THEME_CSS));
+
+        $response = $kernel->handle(
+            $this->request('POST', '/detect', post: ['url' => 'example.com']),
+        );
+
+        $this->assertSame(200, $response->status());
+        $this->assertStringContainsString('XSS Theme', $response->content());
+        $this->assertStringContainsString('Attacker', $response->content());
+        $this->assertStringContainsString('GPL-2.0', $response->content());
     }
 
     /**

@@ -11,10 +11,10 @@ $url = $url ?? '';
             <span class="icon-tile" aria-hidden="true"><i class="bi bi-plug"></i></span>
             <div>
                 <h3 class="h6 fw-bold mb-0 text-break">
-                    <?php if ((string) $url !== ''): ?>
+                    <?php if ((string) $url !== '' && safe_href((string) $url) !== ''): ?>
                         <a
                             class="text-decoration-none"
-                            href="<?= htmlspecialchars((string) $url, ENT_QUOTES, 'UTF-8') ?>"
+                            href="<?= htmlspecialchars(safe_href((string) $url), ENT_QUOTES, 'UTF-8') ?>"
                             target="_blank"
                             rel="noopener"
                         ><?= htmlspecialchars((string) $name, ENT_QUOTES, 'UTF-8') ?></a>
