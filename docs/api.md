@@ -58,6 +58,8 @@ Request body:
   the API surface stays stable.
 - A scheme-less host is inferred as `https://` (mirroring the web analyzer).
 - The maximum URL length is **2048 characters**.
+- The request body is capped at **16 KiB**. A larger body is rejected with
+  `413 payload_too_large` before any processing (see §5).
 
 ### Curl example
 
@@ -115,6 +117,7 @@ produces four distinct classes of validation outcome:
 | Condition                                               | Status | Error code          |
 |---------------------------------------------------------|--------|---------------------|
 | `Content-Type` is not `application/json`                | 415    | `unsupported_media_type` |
+| Body is larger than 16 KiB                               | 413    | `payload_too_large` |
 | Body is malformed JSON (cannot be decoded)              | 400    | `invalid_json`      |
 | Body decodes to a non-object JSON value (`null`, a scalar, or a JSON array) | 422 | `body_not_object` |
 | Body is an empty JSON object `{}`                       | 422    | `body_not_object`   |
@@ -251,6 +254,7 @@ exposed; any internal code is mapped to `analysis_failed`. Error entries expose
 | 200    | Detection completed, or analysis failed (see §5.3). |
 | 400    | Malformed JSON body. |
 | 401    | Missing or invalid API key. |
+| 413    | Request body exceeds the 16 KiB maximum. |
 | 415    | Wrong `Content-Type`. |
 | 422    | Schema/validation error. |
 | 429    | Rate limit exceeded, or server busy. |
@@ -361,6 +365,7 @@ by the `bootstrap/app.php` container wiring.
 | `API_MAX_CONCURRENT`   | `10`    | Max concurrent detections (`0` disables). |
 | `HTTP_MAX_RESPONSE_BYTES` | `5242880` | Outbound HTTP response-body size cap in bytes (5 MiB). Applied to every fetched resource across both HTTP clients; oversized responses fail closed as a transport failure. |
 | `HTTP_MAX_HEADER_BYTES` | `65536` | Outbound HTTP response-header size cap in bytes (64 KiB). Applied per HTTP hop across both HTTP clients; oversized header regions fail closed as a transport failure. |
+| `Request::DEFAULT_MAX_BODY_BYTES` (constant) | `16384` | Inbound API request-body cap in bytes (16 KiB). A fixed application constant, not environment-configurable. Oversized bodies fail closed with `413 payload_too_large` (see §4). |
 
 An example is provided in `.env.example`.
 

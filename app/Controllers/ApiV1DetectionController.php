@@ -89,6 +89,17 @@ final class ApiV1DetectionController
             );
         }
 
+        if ($request->bodyExceedsLimit()) {
+            return $this->json(
+                $this->presenter->error(
+                    'payload_too_large',
+                    'The request body exceeds the maximum allowed size.',
+                    $requestId,
+                ),
+                413,
+            );
+        }
+
         $payload = json_decode($request->body(), true);
 
         if ($payload === null && trim($request->body()) !== 'null') {

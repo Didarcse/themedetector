@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Api;
 
+use App\Core\Request;
 use App\Core\Response;
 use App\Modules\Http\HttpClientInterface;
 use App\Modules\Http\HttpException;
@@ -168,6 +169,115 @@ HTML;
         $errors = $payload['errors'];
         self::assertIsArray($errors);
         self::assertSame([['code' => 'invalid_json', 'message' => 'The request body is not valid JSON.']], $errors);
+    }
+
+    public function test_malformed_json_below_the_limit_still_returns_400(): void
+    {
+        $this->kernel = ApiTestKernel::create();
+
+        $body = '{not json' . str_repeat(' ', 1000);
+
+        self::assertLessThan(Request::DEFAULT_MAX_BODY_BYTES, strlen($body));
+
+        $response = $this->post($body);
+
+        self::assertSame(400, $response->status());
+        self::assertSame('invalid_json', $this->errorCode($this->payload($response)));
+    }
+
+    public function test_oversized_request_body_returns_413_payload_too_large(): void
+    {
+        $this->kernel = ApiTestKernel::create();
+
+        $response = $this->post('{"url":"' . str_repeat('a', 17000) . '"}');
+
+        self::assertSame(413, $response->status());
+
+        $payload = $this->payload($response);
+        self::assertSame('v1', $payload['schemaVersion']);
+        self::assertIsString($payload['requestId']);
+        self::assertFalse($payload['success']);
+        self::assertNull($payload['data']);
+
+        $errors = $payload['errors'];
+        self::assertIsArray($errors);
+
+        self::assertSame([
+            'code' => 'payload_too_large',
+            'message' => 'The request body exceeds the maximum allowed size.',
+        ], $errors[0]);
+
+        self::assertSame([], $this->kernel->client->requestedUrls());
+    }
+
+    public function test_valid_but_oversized_json_is_rejected_when_content_length_is_absent(): void
+    {
+        $this->kernel = ApiTestKernel::create();
+
+        $body = '{"url":"https://example.com"}' . str_repeat(' ', Request::DEFAULT_MAX_BODY_BYTES);
+
+        self::assertGreaterThan(Request::DEFAULT_MAX_BODY_BYTES, strlen($body));
+
+        $response = $this->post($body);
+
+        self::assertSame(413, $response->status());
+        self::assertSame('payload_too_large', $this->errorCode($this->payload($response)));
+    }
+
+    public function test_request_body_exactly_at_the_limit_is_processed_normally(): void
+    {
+        $this->kernel = ApiTestKernel::create();
+
+        $base = '{"url":"https://example.com"}';
+        $body = $base . str_repeat(' ', Request::DEFAULT_MAX_BODY_BYTES - strlen($base));
+
+        self::assertSame(Request::DEFAULT_MAX_BODY_BYTES, strlen($body));
+
+        $response = $this->post($body);
+
+        self::assertSame(200, $response->status());
+        self::assertTrue($this->payload($response)['success']);
+    }
+
+    public function test_declared_content_length_over_the_limit_returns_413_before_analysis(): void
+    {
+        $this->kernel = ApiTestKernel::create();
+
+        $response = $this->post('{"url":"https://example.com"}', ['CONTENT_LENGTH' => '999999999']);
+
+        self::assertSame(413, $response->status());
+        self::assertSame('payload_too_large', $this->errorCode($this->payload($response)));
+        self::assertSame([], $this->kernel->client->requestedUrls());
+    }
+
+    public function test_oversized_body_returns_413_even_when_api_keys_are_configured(): void
+    {
+        $this->kernel = ApiTestKernel::create(apiKeys: ['secret-key']);
+
+        $response = $this->post(
+            '{"url":"' . str_repeat('a', 17000) . '"}',
+            ['HTTP_AUTHORIZATION' => 'Bearer secret-key'],
+        );
+
+        self::assertSame(413, $response->status());
+        self::assertSame('payload_too_large', $this->errorCode($this->payload($response)));
+    }
+
+    public function test_oversized_request_bodies_do_not_consume_the_rate_limit_budget(): void
+    {
+        $this->kernel = ApiTestKernel::create(
+            anonymousLimit: 1,
+            windowSeconds: 3600,
+            now: 1_700_000_000,
+        );
+
+        $server = ['REMOTE_ADDR' => '203.0.113.50'];
+
+        $oversized = $this->post('{"url":"' . str_repeat('a', 17000) . '"}', $server);
+        self::assertSame(413, $oversized->status());
+
+        $normal = $this->post('{"url":"example.com"}', $server);
+        self::assertSame(200, $normal->status());
     }
 
     public function test_wrong_content_type_returns_415(): void
