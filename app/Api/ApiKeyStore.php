@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Api;
 
+use App\Core\Environment;
+
 /**
  * Immutable store of accepted API keys loaded from configuration.
  *
@@ -64,7 +66,7 @@ final readonly class ApiKeyStore
     {
         $keys = [];
 
-        $bulk = self::env('API_KEYS');
+        $bulk = Environment::get('API_KEYS');
 
         if (is_string($bulk) && $bulk !== '') {
             foreach (explode(',', $bulk) as $part) {
@@ -72,7 +74,7 @@ final readonly class ApiKeyStore
             }
         }
 
-        $single = self::env('API_KEY');
+        $single = Environment::get('API_KEY');
 
         if (is_string($single) && $single !== '') {
             $keys[] = trim($single);
@@ -107,34 +109,5 @@ final readonly class ApiKeyStore
         }
 
         return false;
-    }
-
-    /**
-     * Read an environment value without exposing it to logging.
-     *
-     * Checks getenv first, then the $_ENV and $_SERVER superglobals so the
-     * store works under both FPM and CLI configurations.
-     *
-     * @param string $name The environment variable name.
-     *
-     * @return string|null The value, or null when unset.
-     */
-    private static function env(string $name): ?string
-    {
-        $value = getenv($name);
-
-        if ($value !== false && $value !== '') {
-            return $value;
-        }
-
-        if (isset($_ENV[$name]) && is_string($_ENV[$name]) && $_ENV[$name] !== '') {
-            return $_ENV[$name];
-        }
-
-        if (isset($_SERVER[$name]) && is_string($_SERVER[$name]) && $_SERVER[$name] !== '') {
-            return $_SERVER[$name];
-        }
-
-        return null;
     }
 }

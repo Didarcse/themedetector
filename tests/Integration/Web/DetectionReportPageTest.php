@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Web;
 
+use App\Api\RateLimiter;
 use App\Core\Application;
 use App\Core\Container;
 use App\Core\Dispatcher;
@@ -45,6 +46,16 @@ use PHPUnit\Framework\TestCase;
 #[BackupGlobals(true)]
 final class DetectionReportPageTest extends TestCase
 {
+    private ?string $storageDir = null;
+
+    protected function tearDown(): void
+    {
+        if ($this->storageDir !== null) {
+            self::removeDirectory($this->storageDir);
+        }
+
+        $this->storageDir = null;
+    }
     private const HOMEPAGE_HTML = <<<'HTML'
 <!DOCTYPE html>
 <html lang="en">
@@ -448,10 +459,21 @@ CSS;
             ),
         );
 
+        $storageDir = sys_get_temp_dir() . '/web-page-test-' . uniqid('', true);
+        $this->storageDir = $storageDir;
+
+        $webRateLimiter = new RateLimiter(
+            $storageDir . '/rate-limit/web',
+            1000,
+            3600,
+            'web',
+        );
+
         $container->set(
             DetectionController::class,
             static fn (Container $container): DetectionController => new DetectionController(
                 $container->get(DetectionService::class),
+                $webRateLimiter,
             ),
         );
 
@@ -470,6 +492,34 @@ CSS;
         $GLOBALS['app'] = $container;
 
         return $kernel;
+    }
+
+    /**
+     * Recursively remove a directory tree.
+     *
+     * @param string $directory The directory to remove.
+     */
+    private static function removeDirectory(string $directory): void
+    {
+        if (!is_dir($directory)) {
+            return;
+        }
+
+        $items = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST,
+        );
+
+        /** @var \SplFileInfo $item */
+        foreach ($items as $item) {
+            if ($item->isDir()) {
+                @rmdir($item->getPathname());
+            } else {
+                @unlink($item->getPathname());
+            }
+        }
+
+        @rmdir($directory);
     }
 }
 

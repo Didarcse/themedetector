@@ -11,6 +11,7 @@ use App\Api\WorkloadGuard;
 use App\Core\Application;
 use App\Core\Container;
 use App\Core\Dispatcher;
+use App\Core\Environment;
 use App\Core\ExceptionHandler;
 use App\Core\Kernel;
 use App\Core\Request;
@@ -206,10 +207,30 @@ $container->set(
     ),
 );
 
+$storageDir = dirname(__DIR__) . '/storage';
+
+/*
+ * Web /detect boundary: the fixed-window per-IP rate limiter is a
+ * dedicated limiter, fully isolated from the API limiters — its own
+ * storage path, namespace, and environment variables. Identifiers are
+ * sha256-hashed before they touch the filesystem, so raw IP addresses
+ * never appear in file names or contents.
+ */
+$container->set(
+    'web.rate_limiter',
+    static fn (): RateLimiter => new RateLimiter(
+        $storageDir . '/web/rate-limit',
+        Environment::int('WEB_DETECT_LIMIT', 10),
+        Environment::int('WEB_DETECT_WINDOW', 900),
+        'web',
+    ),
+);
+
 $container->set(
     DetectionController::class,
     static fn (Container $container): DetectionController => new DetectionController(
         $container->get(DetectionService::class),
+        $container->get('web.rate_limiter'),
     ),
 );
 
@@ -227,8 +248,6 @@ $container->set(
  * Public API boundary services. The API reuses the existing
  * WebsiteReportAnalyzer; only boundary concerns are registered here.
  */
-
-$storageDir = dirname(__DIR__) . '/storage';
 
 $container->set(
     ApiKeyStore::class,
@@ -249,7 +268,7 @@ $container->set(
     AnalysisCache::class,
     static fn (): AnalysisCache => new AnalysisCache(
         $storageDir . '/cache/api',
-        (int) (getenv('API_CACHE_TTL') ?: 300),
+        Environment::int('API_CACHE_TTL', 300),
         ApiDetectionResponsePresenter::SCHEMA_VERSION,
     ),
 );
@@ -258,8 +277,8 @@ $container->set(
     'api.rate_limiter.anonymous',
     static fn (): RateLimiter => new RateLimiter(
         $storageDir . '/api/rate-limit/anonymous',
-        (int) (getenv('API_ANON_LIMIT') ?: 10),
-        (int) (getenv('API_ANON_WINDOW') ?: 900),
+        Environment::int('API_ANON_LIMIT', 10),
+        Environment::int('API_ANON_WINDOW', 900),
         'anonymous',
     ),
 );
@@ -268,8 +287,8 @@ $container->set(
     'api.rate_limiter.keyed',
     static fn (): RateLimiter => new RateLimiter(
         $storageDir . '/api/rate-limit/keyed',
-        (int) (getenv('API_KEYED_LIMIT') ?: 60),
-        (int) (getenv('API_KEYED_WINDOW') ?: 3600),
+        Environment::int('API_KEYED_LIMIT', 60),
+        Environment::int('API_KEYED_WINDOW', 3600),
         'keyed',
     ),
 );
@@ -278,7 +297,7 @@ $container->set(
     WorkloadGuard::class,
     static fn (): WorkloadGuard => new WorkloadGuard(
         $storageDir . '/api/workload',
-        (int) (getenv('API_MAX_CONCURRENT') ?: 10),
+        Environment::int('API_MAX_CONCURRENT', 10),
     ),
 );
 

@@ -27,6 +27,9 @@ Thumbs.db
 # API runtime state (rate-limit counters, workload guard)
 /storage/api/*
 
+# Web runtime state (detection rate-limit counters)
+/storage/web/*
+
 # Uploads
 /storage/uploads/*
 !storage/uploads/.gitkeep

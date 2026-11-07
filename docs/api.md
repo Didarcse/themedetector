@@ -279,8 +279,8 @@ Two independent tiers:
   ignored so a client cannot spoof its identity.
 - The tier is chosen after authentication: keyed requests never consume the
   anonymous budget and vice-versa.
-- Every rate-limited response carries `X-RateLimit-Limit` and
-  `X-RateLimit-Remaining` for the applied tier. A denied response additionally
+- Every rate-limited API response carries `X-RateLimit-Limit` and
+  `X-RateLimit-Remaining` for the applied tier. A denied API response additionally
   carries `Retry-After` (whole seconds until the window resets).
 
 ```
@@ -288,6 +288,21 @@ X-RateLimit-Limit: 10
 X-RateLimit-Remaining: 0
 Retry-After: 812
 ```
+
+### Web `/detect` rate limit
+
+The public web detection form (`POST /detect`) is covered by a **separate**
+per-IP fixed-window limiter that is fully isolated from the API tiers above:
+its own storage directory (`storage/web/rate-limit`), namespace, and
+environment variables (`WEB_DETECT_LIMIT`, default `10`; `WEB_DETECT_WINDOW`,
+default `900`). The limiter identifies clients by `REMOTE_ADDR` only; it does
+not inspect `X-Forwarded-For` or any other forwarded header. Behind a reverse
+proxy or CDN, configure the server or proxy so `REMOTE_ADDR` represents the
+intended client identity (for example, by overwriting it at the trusted edge).
+Do not trust arbitrary `X-Forwarded-For` values. A limited request renders the
+report page's error state with HTTP `429` and a `Retry-After` header; detection
+is not executed. The web limiter does not emit `X-RateLimit-*` headers; those
+apply to the API tiers above.
 
 ### Concurrency guard
 
@@ -363,9 +378,16 @@ by the `bootstrap/app.php` container wiring.
 | `API_KEYED_WINDOW`     | `3600`  | Keyed window in seconds. |
 | `API_CACHE_TTL`        | `300`   | Analysis cache TTL in seconds. |
 | `API_MAX_CONCURRENT`   | `10`    | Max concurrent detections (`0` disables). |
+| `WEB_DETECT_LIMIT`     | `10`    | Web `/detect` per-IP requests per window. |
+| `WEB_DETECT_WINDOW`    | `900`   | Web `/detect` window in seconds. |
 | `HTTP_MAX_RESPONSE_BYTES` | `5242880` | Outbound HTTP response-body size cap in bytes (5 MiB). Applied to every fetched resource across both HTTP clients; oversized responses fail closed as a transport failure. |
 | `HTTP_MAX_HEADER_BYTES` | `65536` | Outbound HTTP response-header size cap in bytes (64 KiB). Applied per HTTP hop across both HTTP clients; oversized header regions fail closed as a transport failure. |
 | `Request::DEFAULT_MAX_BODY_BYTES` (constant) | `16384` | Inbound API request-body cap in bytes (16 KiB). A fixed application constant, not environment-configurable. Oversized bodies fail closed with `413 payload_too_large` (see §4). |
+
+Numeric rate-limit, cache, and concurrency values must be integers; invalid
+values throw `InvalidArgumentException` when the affected service is first
+resolved, which currently surfaces as a generic HTTP 500 on the first request
+that uses that service. `API_MAX_CONCURRENT=0` disables the concurrency guard.
 
 An example is provided in `.env.example`.
 
@@ -378,7 +400,9 @@ An example is provided in `.env.example`.
   instance only; horizontal scaling needs a shared store (documented future
   work).
 - **Storage directory.** The API writes under `storage/api/*` and
-  `storage/cache/api`. The process must be able to create those directories.
+  `storage/cache/api`; the web `/detect` limiter writes its counters under
+  `storage/web/rate-limit`. The process must be able to create those
+  directories.
 - **No CORS.** Browsers calling the endpoint directly will be subject to
   same-origin policy; use a server-to-server client.
 

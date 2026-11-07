@@ -152,6 +152,10 @@ HTML;
      *                                                 the offline fake.
      * @param string|null              $homepageHtml    The homepage fixture.
      * @param string|null              $stylesheetCss   The stylesheet fixture.
+     * @param int                      $webLimit        The web `/detect`
+     *                                                 per-IP request limit.
+     * @param int                      $webWindowSeconds The web `/detect`
+     *                                                 window length.
      *
      * @return self The booted test kernel.
      */
@@ -166,6 +170,8 @@ HTML;
         ?HttpClientInterface $client = null,
         ?string $homepageHtml = null,
         ?string $stylesheetCss = null,
+        int $webLimit = 1000,
+        int $webWindowSeconds = 3600,
     ): self {
         $application = new Application();
         $container = $application->container();
@@ -283,6 +289,8 @@ HTML;
             static fn (): SeoController => new SeoController(),
         );
 
+        $storageDir = sys_get_temp_dir() . '/api-test-' . uniqid('', true);
+
         $container->set(
             DetectionService::class,
             static fn (Container $container): DetectionService => new DetectionService(
@@ -290,10 +298,19 @@ HTML;
             ),
         );
 
+        $webRateLimiter = new RateLimiter(
+            $storageDir . '/rate-limit/web',
+            $webLimit,
+            $webWindowSeconds,
+            'web',
+            $now === null ? null : static fn (): int => $now,
+        );
+
         $container->set(
             DetectionController::class,
             static fn (Container $container): DetectionController => new DetectionController(
                 $container->get(DetectionService::class),
+                $webRateLimiter,
             ),
         );
 
@@ -301,8 +318,6 @@ HTML;
             LoadingController::class,
             static fn (): LoadingController => new LoadingController(),
         );
-
-        $storageDir = sys_get_temp_dir() . '/api-test-' . uniqid('', true);
 
         $container->set(
             ApiKeyStore::class,
@@ -410,12 +425,13 @@ HTML;
      * @param string               $method The HTTP method.
      * @param string               $uri    The request URI.
      * @param array<string, mixed> $post   The POST parameters.
+     * @param array<string, mixed> $server The server variables.
      *
      * @return Response The HTTP response.
      */
-    public function handleRequest(string $method, string $uri, array $post = []): Response
+    public function handleRequest(string $method, string $uri, array $post = [], array $server = []): Response
     {
-        $request = new Request($method, $uri, [], $post);
+        $request = new Request($method, $uri, [], $post, $server);
 
         $this->container->set(Request::class, $request);
 
