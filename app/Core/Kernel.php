@@ -21,16 +21,30 @@ final class Kernel
         try {
             $route = $this->router->match($request);
 
-            if ($route === null) {
-                return new Response(
+            $response = $route === null
+                ? new Response(
                     content: '404 Not Found',
                     status: 404,
-                );
-            }
-
-            return $this->dispatcher->dispatch($route);
+                )
+                : $this->dispatcher->dispatch($route);
         } catch (\Throwable $exception) {
-            return $this->exceptionHandler->render($exception);
+            $response = $this->exceptionHandler->render($exception);
         }
+
+        /*
+         * Strict-Transport-Security is transport dependent, so it is applied
+         * here rather than in the Response defaults. Request::isSecure() only
+         * reports true for a genuine HTTPS connection (direct TLS or a
+         * configured trusted reverse proxy), never for arbitrary forwarded
+         * protocol headers.
+         */
+        if ($request->isSecure()) {
+            return $response->withHeader(
+                'Strict-Transport-Security',
+                'max-age=' . Response::HSTS_MAX_AGE,
+            );
+        }
+
+        return $response;
     }
 }

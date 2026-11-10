@@ -10,6 +10,7 @@ use App\Core\Dispatcher;
 use App\Core\ExceptionHandler;
 use App\Core\Kernel;
 use App\Core\Request;
+use App\Core\Response;
 use App\Core\Router;
 use App\Core\View;
 use App\Controllers\AboutController;
@@ -22,10 +23,12 @@ use PHPUnit\Framework\TestCase;
 /**
  * Verifies the security response headers on the public web routes.
  *
- * Every response must carry X-Content-Type-Options: nosniff and
- * Referrer-Policy: strict-origin-when-cross-origin regardless of the route
- * or content type, so browsers never guess content types and referrer
- * information is kept conservative across origins.
+ * Every response must carry the baseline security headers — nosniff,
+ * Referrer-Policy, X-Frame-Options: DENY, and the restrictive
+ * Content-Security-Policy — regardless of the route or content type.
+ * Strict-Transport-Security is emitted only when the request is genuinely
+ * HTTPS; forwarded protocol headers are trusted only from a configured
+ * trusted reverse proxy.
  */
 #[BackupGlobals(true)]
 final class ResponseSecurityHeadersTest extends TestCase
@@ -36,11 +39,7 @@ final class ResponseSecurityHeadersTest extends TestCase
             $response = $this->kernel()->handle($this->request('GET', $uri));
 
             self::assertSame(200, $response->status(), "Route {$uri} should respond 200.");
-            self::assertSame('nosniff', $response->headers()['X-Content-Type-Options']);
-            self::assertSame(
-                'strict-origin-when-cross-origin',
-                $response->headers()['Referrer-Policy'],
-            );
+            self::assertBaselineSecurityHeaders($response);
         }
     }
 
@@ -50,12 +49,125 @@ final class ResponseSecurityHeadersTest extends TestCase
             $response = $this->kernel()->handle($this->request('GET', $uri));
 
             self::assertSame(200, $response->status(), "Route {$uri} should respond 200.");
-            self::assertSame('nosniff', $response->headers()['X-Content-Type-Options']);
-            self::assertSame(
-                'strict-origin-when-cross-origin',
-                $response->headers()['Referrer-Policy'],
-            );
+            self::assertBaselineSecurityHeaders($response);
         }
+    }
+
+    public function test_content_security_policy_matches_the_documented_policy(): void
+    {
+        $response = $this->kernel()->handle($this->request('GET', '/'));
+        $policy = $response->headers()['Content-Security-Policy'];
+
+        self::assertSame(Response::CONTENT_SECURITY_POLICY, $policy);
+        self::assertStringNotContainsString('unsafe-inline', $policy);
+        self::assertStringNotContainsString('unsafe-eval', $policy);
+        self::assertStringNotContainsString('*', $policy);
+        self::assertStringContainsString("frame-ancestors 'none'", $policy);
+        self::assertStringContainsString(
+            "script-src 'self' https://cdn.jsdelivr.net",
+            $policy,
+        );
+        self::assertStringContainsString(
+            "connect-src 'self'",
+            $policy,
+        );
+        self::assertStringContainsString(
+            "form-action 'self'",
+            $policy,
+        );
+    }
+
+    public function test_x_frame_options_is_deny(): void
+    {
+        $response = $this->kernel()->handle($this->request('GET', '/'));
+
+        self::assertSame('DENY', $response->headers()['X-Frame-Options']);
+    }
+
+    public function test_hsts_is_sent_on_https_requests(): void
+    {
+        $response = $this->kernel()->handle(
+            $this->request('GET', '/', server: ['HTTPS' => 'on']),
+        );
+
+        self::assertSame(200, $response->status());
+        self::assertArrayHasKey('Strict-Transport-Security', $response->headers());
+        self::assertSame(
+            'max-age=' . Response::HSTS_MAX_AGE,
+            $response->headers()['Strict-Transport-Security'],
+        );
+        self::assertStringNotContainsString(
+            'includeSubDomains',
+            $response->headers()['Strict-Transport-Security'],
+        );
+        self::assertStringNotContainsString(
+            'preload',
+            $response->headers()['Strict-Transport-Security'],
+        );
+    }
+
+    public function test_hsts_is_not_sent_on_http_requests(): void
+    {
+        $response = $this->kernel()->handle(
+            $this->request('GET', '/', server: ['SERVER_PORT' => 80]),
+        );
+
+        self::assertSame(200, $response->status());
+        self::assertArrayNotHasKey('Strict-Transport-Security', $response->headers());
+    }
+
+    public function test_hsts_is_not_sent_when_the_https_flag_is_off(): void
+    {
+        $response = $this->kernel()->handle(
+            $this->request('GET', '/', server: ['HTTPS' => 'off']),
+        );
+
+        self::assertArrayNotHasKey('Strict-Transport-Security', $response->headers());
+    }
+
+    public function test_forwarded_proto_does_not_enable_hsts_without_a_trusted_proxy(): void
+    {
+        $response = $this->kernel()->handle(
+            $this->request('GET', '/', server: [
+                'REMOTE_ADDR' => '198.51.100.7',
+                'HTTP_X_FORWARDED_PROTO' => 'https',
+            ]),
+        );
+
+        self::assertArrayNotHasKey('Strict-Transport-Security', $response->headers());
+    }
+
+    public function test_forwarded_proto_enables_hsts_from_a_trusted_proxy(): void
+    {
+        $response = $this->kernel()->handle(
+            $this->request(
+                'GET',
+                '/',
+                server: [
+                    'REMOTE_ADDR' => '203.0.113.9',
+                    'HTTP_X_FORWARDED_PROTO' => 'https',
+                ],
+                trustedProxies: ['203.0.113.9'],
+            ),
+        );
+
+        self::assertSame(
+            'max-age=' . Response::HSTS_MAX_AGE,
+            $response->headers()['Strict-Transport-Security'],
+        );
+    }
+
+    public function test_hsts_applies_to_error_responses_over_https(): void
+    {
+        $response = $this->kernel()->handle(
+            $this->request('GET', '/detect', server: ['HTTPS' => 'on']),
+        );
+
+        self::assertSame(404, $response->status());
+        self::assertSame(
+            'max-age=' . Response::HSTS_MAX_AGE,
+            $response->headers()['Strict-Transport-Security'],
+        );
     }
 
     public function test_security_headers_are_not_duplicated_on_error_responses(): void
@@ -64,15 +176,53 @@ final class ResponseSecurityHeadersTest extends TestCase
 
         self::assertSame(404, $response->status(), 'GET on /detect must be rejected.');
 
-        $headers = $response->headers();
+        $headerNames = implode("\n", array_keys($response->headers()));
 
-        self::assertSame(1, substr_count(implode("\n", array_keys($headers)), 'X-Content-Type-Options'));
-        self::assertSame(1, substr_count(implode("\n", array_keys($headers)), 'Referrer-Policy'));
+        foreach (['X-Content-Type-Options', 'Referrer-Policy', 'X-Frame-Options', 'Content-Security-Policy'] as $name) {
+            self::assertSame(1, substr_count($headerNames, $name), "{$name} must appear once.");
+        }
     }
 
-    private function request(string $method, string $uri): Request
+    public function test_normal_html_response_is_not_broken(): void
     {
-        $request = new Request($method, $uri, [], []);
+        $response = $this->kernel()->handle($this->request('GET', '/'));
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString('ThemeDetectorTool', $response->content());
+        self::assertStringContainsString('Works Across the Web', $response->content());
+        self::assertSame('text/html; charset=UTF-8', $response->headers()['Content-Type']);
+    }
+
+    private function assertBaselineSecurityHeaders(Response $response): void
+    {
+        self::assertSame('nosniff', $response->headers()['X-Content-Type-Options']);
+        self::assertSame('DENY', $response->headers()['X-Frame-Options']);
+        self::assertSame(
+            'strict-origin-when-cross-origin',
+            $response->headers()['Referrer-Policy'],
+        );
+        self::assertSame(
+            Response::CONTENT_SECURITY_POLICY,
+            $response->headers()['Content-Security-Policy'],
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $server
+     * @param list<string>         $trustedProxies
+     */
+    private function request(
+        string $method,
+        string $uri,
+        array $server = [],
+        array $trustedProxies = [],
+    ): Request {
+        $request = new Request(
+            method: $method,
+            uri: $uri,
+            server: $server,
+            trustedProxies: $trustedProxies,
+        );
 
         $container = $GLOBALS['app'] ?? null;
 
