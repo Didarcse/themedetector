@@ -54,6 +54,48 @@ Out of scope: unmodified third-party dependencies (report those to their
 respective projects), social engineering, and denial-of-service via intentionally
 hostile target content during manual analysis.
 
+## Session and CSRF Protection
+
+The browser-facing detection flow uses PHP sessions and a synchronizer CSRF
+token:
+
+- The session cookie is named `TD_SESSION` and is always `HttpOnly`, with
+  `SameSite=Lax`, `Path=/`, and an empty domain. It is marked `Secure`
+  automatically when the request is genuinely HTTPS (using the same trusted
+  transport detection as HSTS, described below).
+- Sessions run in strict mode with cookies only and trans-SID disabled. A brand
+  new anonymous session has its identifier regenerated once to prevent session
+  fixation; existing sessions keep their identifier.
+- The CSRF token is 256 bits from `random_bytes(32)`, stored in the session,
+  stable for the life of the session, and compared with `hash_equals()`. It is
+  not rotated automatically in production; any future authentication or
+  privilege change must explicitly rotate the token alongside regenerating the
+  session identifier.
+- `POST /loading` and `POST /detect` require a valid token in the form body.
+  Requests that fail validation receive a generic `403 Forbidden` **before**
+  rate limiting or detection runs, so a rejected request cannot spend the
+  caller's detection budget.
+- `GET /loading` never starts detection. It renders a manual Start action whose
+  form carries the token; the JavaScript progress flow submits that token with
+  its `POST /detect` request.
+- `POST /api/v1/detect` is a machine-to-machine JSON API and remains
+  CSRF-exempt; it must be protected with API keys and network controls instead.
+- HTML responses that contain a token are sent with `Cache-Control: no-store`
+  and `Vary: Cookie`. API JSON caching behaviour is unchanged.
+
+### Session storage
+
+Sessions are stored as files under `storage/sessions`, which must be writable by
+the web server user and **must not be web-accessible**. The application fails
+closed if the storage directory cannot be created or written, or if the session
+cannot be started or persisted.
+
+This file-based store is local to one application instance. Deployments with
+multiple application instances must either use shared session storage (for
+example a shared filesystem mounted at `storage/sessions`) or configure the load
+balancer for sticky sessions; otherwise a token issued by one instance will be
+rejected by another.
+
 ## HTTP Security Headers
 
 Every response — HTML pages, API JSON, `robots.txt`, `sitemap.xml`, and error

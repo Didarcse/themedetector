@@ -47,6 +47,11 @@ use App\Modules\ThemeExtraction\ThemeExtractionManager;
 use App\Modules\ThemeExtraction\ThemeExtractor;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistry;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistryFactory;
+use App\Security\CsrfGuard;
+use App\Security\CsrfTokenManager;
+use App\Security\NativeSessionDriver;
+use App\Security\SessionCsrfTokenStore;
+use App\Security\SessionManager;
 use App\Services\DetectionService;
 use App\Services\WebsiteReportAnalyzer;
 
@@ -210,6 +215,40 @@ $container->set(
 $storageDir = dirname(__DIR__) . '/storage';
 
 /*
+ * Session and CSRF services. The session manager is registered lazily so it
+ * can read the current Request (set by the HTTP entry point) and enforce a
+ * Secure cookie whenever the request is genuinely HTTPS. No session is
+ * started for API requests; the store only starts one when a token is
+ * issued or validated for a web request.
+ */
+$container->set(
+    SessionManager::class,
+    static function (Container $container) use ($storageDir): SessionManager {
+        $request = $container->has(Request::class) ? $container->get(Request::class) : null;
+
+        return new SessionManager(
+            new NativeSessionDriver(),
+            $storageDir . '/sessions',
+            $request instanceof Request && $request->isSecure(),
+        );
+    },
+);
+
+$container->set(
+    CsrfTokenManager::class,
+    static fn (Container $container): CsrfTokenManager => new CsrfTokenManager(
+        new SessionCsrfTokenStore($container->get(SessionManager::class)),
+    ),
+);
+
+$container->set(
+    CsrfGuard::class,
+    static fn (Container $container): CsrfGuard => new CsrfGuard(
+        $container->get(CsrfTokenManager::class),
+    ),
+);
+
+/*
  * Web /detect boundary: the fixed-window per-IP rate limiter is a
  * dedicated limiter, fully isolated from the API limiters — its own
  * storage path, namespace, and environment variables. Identifiers are
@@ -231,12 +270,15 @@ $container->set(
     static fn (Container $container): DetectionController => new DetectionController(
         $container->get(DetectionService::class),
         $container->get('web.rate_limiter'),
+        $container->get(CsrfGuard::class),
     ),
 );
 
 $container->set(
     LoadingController::class,
-    static fn (): LoadingController => new LoadingController(),
+    static fn (Container $container): LoadingController => new LoadingController(
+        $container->get(CsrfGuard::class),
+    ),
 );
 
 $container->set(

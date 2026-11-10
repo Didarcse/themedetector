@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Core\Response;
+
 /**
  * Renders the application home page.
  *
@@ -20,9 +22,9 @@ namespace App\Controllers;
  */
 final class HomeController
 {
-    public function __invoke(): string
+    public function __invoke(): Response
     {
-        return view('home', [
+        return Response::html(view('home', [
             'pageTitle' => "Detect Any Website's Theme & Plugins Instantly",
             'pageDescription' => 'Enter a website URL to reveal its CMS, theme, theme version, author, and active '
                 . 'plugins. Free website technology detection for WordPress, Shopify, Webflow, Wix, Ghost, '
@@ -30,6 +32,6 @@ final class HomeController
             'canonicalUrl' => canonical_url('/'),
             'ogUrl' => canonical_url('/'),
             'activeNav' => 'home',
-        ], 'layouts.app');
+        ], 'layouts.app'));
     }
 }

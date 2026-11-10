@@ -6,6 +6,7 @@ $buttonLabel = $buttonLabel ?? 'Detect';
 $help = $help ?? 'We will detect the CMS, theme, theme version, author, and plugins behind the website.';
 ?>
 <form action="<?= htmlspecialchars($action, ENT_QUOTES, 'UTF-8') ?>" method="post" role="search" novalidate data-validate-url>
+    <?= csrf_field() ?>
     <label for="url" class="visually-hidden">Website URL</label>
     <div class="input-group input-group-lg shadow-sm has-validation">
         <input

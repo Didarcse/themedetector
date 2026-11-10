@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Added CSRF protection to the browser-facing detection flow. `POST /loading`
+  and `POST /detect` now require a per-session synchronizer token and return a
+  generic `403 Forbidden` before rate limiting or detection when it is missing,
+  invalid, or expired.
+- Added hardened PHP sessions: `TD_SESSION` cookie with `HttpOnly`,
+  `SameSite=Lax`, `Secure` on HTTPS, strict mode, cookies only, trans-SID
+  disabled, and one identifier regeneration for new anonymous sessions.
+- `GET /loading` no longer starts detection automatically; it renders a manual
+  Start action carrying the token. The JSON API remains CSRF-exempt.
+- HTML responses that carry a token are sent with `Cache-Control: no-store` and
+  `Vary: Cookie`.
+
+### Quality Gates
+
+- PHPUnit 11: 1533 tests, 3961 assertions passing.
+- PHPStan Level MAX: 0 errors.
+- PHP_CodeSniffer PSR-12: 0 errors (pre-existing line-length warnings remain in
+  unrelated benchmark/fixture files).
+- Composer audit: 0 security advisories.
+
 ## [2.2.0] - 2026-08-16
 
 ### Added

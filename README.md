@@ -45,8 +45,11 @@ stages.
   contracts.
 - **Facade-first public API** — every module exposes a single public facade
   (`WebsiteDetector`, `ThemeExtractionManager`, `PluginDetectionManager`, ...).
+- **CSRF-protected web flow** — secure, HTTP-only session cookies and
+  synchronizer tokens protect `POST /loading` and `POST /detect`; the JSON API
+  remains keyed and CSRF-exempt.
 - **Quality gates** — PHP 8.2, `declare(strict_types=1)`, PSR-12, PHPStan Level MAX,
-  PHPUnit 11 (1397 tests, 3548 assertions).
+  PHPUnit 11 (1533 tests, 3961 assertions).
 
 ## Theme Extraction Support
 
@@ -131,7 +134,8 @@ themedetector/
 │   ├── api/                    # Public API runtime state (rate limits, workload)
 │   ├── cache/                  # Detection response cache
 │   ├── logs/                   # Application logs
-│   └── phpstan/                # PHPStan cache
+│   ├── phpstan/                # PHPStan cache
+│   └── sessions/               # PHP session files (CSRF tokens; never web-accessible)
 ├── tests/
 │   ├── Benchmark/              # Benchmark runners (NOT PHPUnit — run manually)
 │   ├── Fixtures/               # HTML fixtures (WordPress, Shopify, ...)
@@ -192,7 +196,17 @@ config, tests, storage) must not be web-accessible.
   ```
 
 - **Permissions** — `storage/` must be writable by the web server user for
-  application logs.
+  application logs, rate-limit state, cache, and session files
+  (`storage/sessions`). Keep the entire `storage/` tree outside the document
+  root.
+- **HTTPS** — serve the site over HTTPS in production. The session cookie is
+  marked `Secure` and HSTS is emitted only when the request is genuinely HTTPS;
+  behind a TLS-terminating proxy, pass the `HTTPS` flag or configure
+  `TRUSTED_PROXIES` (see `SECURITY.md`).
+- **Multiple instances** — sessions are file-based and local to one instance.
+  Use shared session storage (for example a shared filesystem mounted at
+  `storage/sessions`) or sticky sessions when running more than one application
+  instance, otherwise CSRF tokens issued by one instance will fail on another.
 - **Requirements** — PHP 8.2+, `ext-curl`, `ext-json`, `ext-dom`, `ext-filter`, and Composer 2.x.
 
 ## Known Limitations
@@ -224,7 +238,7 @@ vendor/bin/phpunit --testsuite tests
 
 `phpunit.xml` is strict: the suite fails on warnings, notices, deprecations, risky
 tests, unexpected global state, and unexpected output. Current status:
-**OK (1397 tests, 3548 assertions)**. Benchmark classes live in `tests/Benchmark/`
+**OK (1533 tests, 3961 assertions)**. Benchmark classes live in `tests/Benchmark/`
 and are deliberately **not** part of the PHPUnit suites — run them manually with
 `php tests/Benchmark/<file>.php`.
 

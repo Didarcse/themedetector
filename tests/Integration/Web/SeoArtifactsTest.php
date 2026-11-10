@@ -16,10 +16,12 @@ use App\Controllers\AboutController;
 use App\Controllers\HomeController;
 use App\Controllers\LoadingController;
 use App\Controllers\SeoController;
+use App\Security\CsrfGuard;
 use PHPUnit\Framework\Attributes\BackupGlobals;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use SimpleXMLElement;
+use Tests\Support\CsrfTestSupport;
 
 /**
  * Verifies the SEO artifacts served by the router.
@@ -136,6 +138,7 @@ final class SeoArtifactsTest extends TestCase
     {
         $application = new Application();
         $container = $application->container();
+        CsrfTestSupport::register($container);
 
         $container->set(
             View::class,
@@ -154,7 +157,9 @@ final class SeoArtifactsTest extends TestCase
 
         $container->set(
             LoadingController::class,
-            static fn (): LoadingController => new LoadingController(),
+            static fn (Container $container): LoadingController => new LoadingController(
+                $container->get(CsrfGuard::class),
+            ),
         );
 
         $container->set(

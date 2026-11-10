@@ -21,6 +21,8 @@
 
     var url = ROOT.getAttribute('data-loading-url') || '';
     var invalid = ROOT.getAttribute('data-loading-invalid') === '1';
+    var autoStart = ROOT.getAttribute('data-loading-auto-start') === '1';
+    var token = ROOT.getAttribute('data-loading-token') || '';
     var steps = parseSteps(ROOT.getAttribute('data-loading-steps'));
 
     var loadingState = ROOT.querySelector('[data-loading-state="loading"]');
@@ -154,6 +156,7 @@
     function runDetection() {
         var params = new URLSearchParams();
         params.set('url', url);
+        params.set('_token', token);
 
         var controller = new AbortController();
         timeoutTimer = window.setTimeout(function () {
@@ -170,6 +173,10 @@
             redirect: 'follow',
             signal: controller.signal,
         }).then(function (response) {
+            if (response.status === 403) {
+                throw new Error('Your session has expired. Please reload the page and try again.');
+            }
+
             if (!response.ok) {
                 throw new Error('The detection service is unavailable. Please try again.');
             }
@@ -229,6 +236,14 @@
             return;
         }
 
+        if (!token) {
+            showError(
+                'Session expired',
+                'Your session has expired. Please reload the page and try again.'
+            );
+            return;
+        }
+
         stopProgress();
         showState('loading');
         setProgress(0);
@@ -265,5 +280,12 @@
         retryButton.addEventListener('click', start);
     }
 
-    start();
+    if (invalid) {
+        showError(
+            'Invalid URL',
+            'Please enter a valid website URL, for example https://example.com.'
+        );
+    } else if (autoStart) {
+        start();
+    }
 })();

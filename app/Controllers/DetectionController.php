@@ -11,6 +11,7 @@ use App\Core\Response;
 use App\Domain\DetectionReport\DetectionError;
 use App\Domain\DetectionReport\DetectionReport;
 use App\Domain\DetectionReport\WebsiteInformation;
+use App\Security\CsrfGuard;
 use App\Services\DetectionService;
 use App\ViewModels\DetectionReportViewModel;
 
@@ -53,16 +54,25 @@ final class DetectionController
     private const FALLBACK_IP = 'unknown';
 
     public function __construct(
-        private DetectionService $service,
-        private RateLimiter $webRateLimiter,
+        private readonly DetectionService $service,
+        private readonly RateLimiter $webRateLimiter,
+        private readonly CsrfGuard $csrf,
     ) {
     }
 
-    public function __invoke(): string|Response
+    public function __invoke(): Response
     {
-        $url = $this->urlFromRequest();
+        $request = $this->currentRequest();
 
-        $rate = $this->webRateLimiter->consume($this->clientIp());
+        $rejection = $this->csrf->reject($request);
+
+        if ($rejection !== null) {
+            return $rejection;
+        }
+
+        $url = $this->urlFromRequest($request);
+
+        $rate = $this->webRateLimiter->consume($this->clientIp($request));
 
         if (!$rate->allowed()) {
             return $this->rateLimitResponse($url, $rate);
@@ -70,13 +80,13 @@ final class DetectionController
 
         $report = $this->service->detect($url);
 
-        return view('report', [
+        return Response::html(view('report', [
             'report' => $report,
             'pageTitle' => 'Detection Report',
             'pageDescription' => $url !== '' ? 'Detection report for ' . $url . '.' : 'Website detection report.',
             'robots' => 'noindex, nofollow',
             'activeNav' => 'home',
-        ], 'layouts.app');
+        ], 'layouts.app'));
     }
 
     /**
@@ -108,7 +118,7 @@ final class DetectionController
 
         $model = DetectionReportViewModel::fromReport($report, $url);
 
-        return new Response(
+        return Response::html(
             view('report', [
                 'report' => $model,
                 'pageTitle' => 'Too Many Requests',
@@ -144,11 +154,13 @@ final class DetectionController
     /**
      * Read the submitted URL from the current request.
      *
+     * @param Request $request The current request.
+     *
      * @return string The submitted URL, or an empty string when absent.
      */
-    private function urlFromRequest(): string
+    private function urlFromRequest(Request $request): string
     {
-        $url = $this->currentRequest()->input('url', '');
+        $url = $request->input('url', '');
 
         return is_string($url) ? trim($url) : '';
     }
@@ -161,11 +173,13 @@ final class DetectionController
      * to the deterministic FALLBACK_IP so the limiter always receives a
      * valid identifier.
      *
+     * @param Request $request The current request.
+     *
      * @return string The client IP, or the fallback identifier.
      */
-    private function clientIp(): string
+    private function clientIp(Request $request): string
     {
-        $ip = $this->currentRequest()->server()['REMOTE_ADDR'] ?? null;
+        $ip = $request->server()['REMOTE_ADDR'] ?? null;
 
         return is_string($ip) && $ip !== '' ? $ip : self::FALLBACK_IP;
     }

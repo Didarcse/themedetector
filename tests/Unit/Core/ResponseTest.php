@@ -52,6 +52,33 @@ final class ResponseTest extends TestCase
         );
     }
 
+    public function test_html_response_cannot_override_mandatory_cache_headers(): void
+    {
+        $response = Response::html(
+            'x',
+            200,
+            [
+                'Retry-After' => '60',
+                'Cache-Control' => 'public, max-age=3600',
+                'Vary' => 'Accept-Encoding',
+                'cache-control' => 'private',
+                'vary' => '*',
+            ],
+        );
+
+        self::assertSame('no-store', $response->headers()['Cache-Control']);
+        self::assertSame('Cookie', $response->headers()['Vary']);
+        self::assertSame('60', $response->headers()['Retry-After']);
+
+        $headerNames = array_map(
+            static fn (string $name): string => strtolower($name),
+            array_keys($response->headers()),
+        );
+
+        self::assertSame(1, count(array_keys($headerNames, 'cache-control')));
+        self::assertSame(1, count(array_keys($headerNames, 'vary')));
+    }
+
     public function test_caller_headers_override_defaults_without_duplication(): void
     {
         $response = new Response(

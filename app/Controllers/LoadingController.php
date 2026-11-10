@@ -5,16 +5,18 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Request;
+use App\Core\Response;
+use App\Security\CsrfGuard;
 
 /**
  * Renders the Detection Flow loading page.
  *
  * LoadingController is the entry point of the detection flow between the
- * homepage and the detection report. It accepts the submitted URL from the
- * POST body or the query string, validates it, and renders the loading
- * view. The loading view drives the client-side progress animation and
- * then performs the actual analysis through the existing report endpoint,
- * so this controller contains no detection logic.
+ * homepage and the detection report. A POST submission is CSRF-protected
+ * and starts the automatic loading workflow; a GET renders a manual Start
+ * action so a cross-site navigation can never consume detection resources
+ * automatically. The controller accepts the URL from the POST body or the
+ * query string and contains no detection logic.
  *
  * Design philosophy:
  *
@@ -22,38 +24,51 @@ use App\Core\Request;
  *   loading page. It performs no analysis.
  * - Single Responsibility Principle: accepting the URL submission and
  *   rendering the loading page is its only concern.
- * - Stateless: the controller holds no request or session state.
  */
 final class LoadingController
 {
-    public function __invoke(): string
-    {
-        $url = $this->urlFromRequest();
+    public function __construct(
+        private readonly CsrfGuard $csrf,
+    ) {
+    }
 
-        return view('loading', [
+    public function __invoke(): Response
+    {
+        $request = $this->request();
+        $isPost = $request->method() === 'POST';
+
+        if ($isPost) {
+            $rejection = $this->csrf->reject($request);
+
+            if ($rejection !== null) {
+                return $rejection;
+            }
+        }
+
+        $url = $this->urlFromRequest($request);
+
+        return Response::html(view('loading', [
             'url' => $url,
             'invalid' => !$this->isValidUrl($url),
+            'autoStart' => $isPost,
+            'token' => csrf_token(),
             'pageTitle' => 'Analyzing Website',
             'pageDescription' => 'Detecting the CMS, theme, and plugins behind '
                 . ($url !== '' ? $url : 'your website') . '.',
             'robots' => 'noindex, nofollow',
             'activeNav' => 'home',
-        ], 'layouts.app');
+        ], 'layouts.app'));
     }
 
     /**
      * Read the submitted URL from the current request.
      *
-     * Prefers the Request registered in the container (set by the HTTP
-     * entry point) and falls back to rebuilding the request from the
-     * globals for CLI contexts.
+     * @param Request $request The current request.
      *
      * @return string The submitted URL, or an empty string when absent.
      */
-    private function urlFromRequest(): string
+    private function urlFromRequest(Request $request): string
     {
-        $request = $this->request();
-
         $url = $request->input('url', '');
 
         if (!is_string($url) || $url === '') {

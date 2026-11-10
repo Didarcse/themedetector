@@ -304,6 +304,13 @@ report page's error state with HTTP `429` and a `Retry-After` header; detection
 is not executed. The web limiter does not emit `X-RateLimit-*` headers; those
 apply to the API tiers above.
 
+Both `POST /loading` and `POST /detect` also require the per-session CSRF token
+in the form body (`_token`). A missing, invalid, or expired token receives a
+generic `403 Forbidden` **before** the web limiter or detection runs. Web HTML
+responses that carry the token are sent with `Cache-Control: no-store` and
+`Vary: Cookie`. The JSON API (`POST /api/v1/detect`) is CSRF-exempt and uses API
+keys instead.
+
 ### Concurrency guard
 
 A separate in-flight guard caps concurrent detections (`API_MAX_CONCURRENT`,

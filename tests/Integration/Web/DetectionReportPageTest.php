@@ -38,10 +38,13 @@ use App\Modules\ThemeExtraction\ThemeExtractionManager;
 use App\Modules\ThemeExtraction\ThemeExtractor;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistry;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistryFactory;
+use App\Security\CsrfGuard;
+use App\Security\CsrfTokenManager;
 use App\Services\DetectionService;
 use App\Services\WebsiteReportAnalyzer;
 use PHPUnit\Framework\Attributes\BackupGlobals;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\CsrfTestSupport;
 
 #[BackupGlobals(true)]
 final class DetectionReportPageTest extends TestCase
@@ -327,9 +330,13 @@ CSS;
      */
     private function request(string $method, string $uri, array $query = [], array $post = []): Request
     {
-        $request = new Request($method, $uri, $query, $post);
-
         $container = $GLOBALS['app'] ?? null;
+
+        if ($container instanceof Container && strtoupper($method) === 'POST') {
+            $post['_token'] = $container->get(CsrfTokenManager::class)->token();
+        }
+
+        $request = new Request($method, $uri, $query, $post);
 
         if ($container instanceof Container) {
             $container->set(Request::class, $request);
@@ -342,6 +349,7 @@ CSS;
     {
         $application = new Application();
         $container = $application->container();
+        CsrfTestSupport::register($container);
 
         $container->set(
             HttpClientInterface::class,
@@ -474,6 +482,7 @@ CSS;
             static fn (Container $container): DetectionController => new DetectionController(
                 $container->get(DetectionService::class),
                 $webRateLimiter,
+                $container->get(CsrfGuard::class),
             ),
         );
 

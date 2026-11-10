@@ -16,8 +16,11 @@ use App\Controllers\AboutController;
 use App\Controllers\HomeController;
 use App\Controllers\LoadingController;
 use App\Controllers\SeoController;
+use App\Security\CsrfGuard;
+use App\Security\CsrfTokenManager;
 use PHPUnit\Framework\Attributes\BackupGlobals;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\CsrfTestSupport;
 
 /**
  * Verifies that every public page emits SEO metadata for the canonical
@@ -102,9 +105,13 @@ final class SeoMetadataTest extends TestCase
      */
     private function request(string $method, string $uri, array $query = [], array $post = []): Request
     {
-        $request = new Request($method, $uri, $query, $post);
-
         $container = $GLOBALS['app'] ?? null;
+
+        if ($container instanceof Container && strtoupper($method) === 'POST') {
+            $post['_token'] = $container->get(CsrfTokenManager::class)->token();
+        }
+
+        $request = new Request($method, $uri, $query, $post);
 
         if ($container instanceof Container) {
             $container->set(Request::class, $request);
@@ -117,6 +124,7 @@ final class SeoMetadataTest extends TestCase
     {
         $application = new Application();
         $container = $application->container();
+        CsrfTestSupport::register($container);
 
         $container->set(
             View::class,
@@ -135,7 +143,9 @@ final class SeoMetadataTest extends TestCase
 
         $container->set(
             LoadingController::class,
-            static fn (): LoadingController => new LoadingController(),
+            static fn (Container $container): LoadingController => new LoadingController(
+                $container->get(CsrfGuard::class),
+            ),
         );
 
         $container->set(

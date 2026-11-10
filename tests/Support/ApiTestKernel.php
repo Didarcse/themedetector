@@ -44,6 +44,8 @@ use App\Modules\ThemeExtraction\ThemeExtractionManager;
 use App\Modules\ThemeExtraction\ThemeExtractor;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistry;
 use App\Modules\ThemeExtraction\ThemeExtractorRegistryFactory;
+use App\Security\CsrfGuard;
+use App\Security\CsrfTokenManager;
 use App\Services\DetectionService;
 use App\Services\WebsiteReportAnalyzer;
 
@@ -114,6 +116,7 @@ HTML;
     public readonly Kernel $kernel;
     public readonly Container $container;
     public readonly ApiFakeHttpClient $client;
+    public readonly CsrfTokenManager $csrfTokens;
 
     private readonly string $storageDir;
 
@@ -125,11 +128,13 @@ HTML;
         Container $container,
         string $storageDir,
         ApiFakeHttpClient $client,
+        CsrfTokenManager $csrfTokens,
     ) {
         $this->kernel = $kernel;
         $this->container = $container;
         $this->storageDir = $storageDir;
         $this->client = $client;
+        $this->csrfTokens = $csrfTokens;
     }
 
     /**
@@ -175,6 +180,7 @@ HTML;
     ): self {
         $application = new Application();
         $container = $application->container();
+        $csrfTokens = CsrfTestSupport::register($container);
 
         $fake = $client instanceof ApiFakeHttpClient
             ? $client
@@ -311,12 +317,15 @@ HTML;
             static fn (Container $container): DetectionController => new DetectionController(
                 $container->get(DetectionService::class),
                 $webRateLimiter,
+                $container->get(CsrfGuard::class),
             ),
         );
 
         $container->set(
             LoadingController::class,
-            static fn (): LoadingController => new LoadingController(),
+            static fn (Container $container): LoadingController => new LoadingController(
+                $container->get(CsrfGuard::class),
+            ),
         );
 
         $container->set(
@@ -399,7 +408,7 @@ HTML;
 
         $GLOBALS['app'] = $container;
 
-        return new self($kernel, $container, $storageDir, $fake);
+        return new self($kernel, $container, $storageDir, $fake, $csrfTokens);
     }
 
     /**
@@ -422,20 +431,41 @@ HTML;
     /**
      * Handle an arbitrary request for web/API co-existence tests.
      *
-     * @param string               $method The HTTP method.
-     * @param string               $uri    The request URI.
-     * @param array<string, mixed> $post   The POST parameters.
-     * @param array<string, mixed> $server The server variables.
+     * @param string               $method    The HTTP method.
+     * @param string               $uri       The request URI.
+     * @param array<string, mixed> $post      The POST parameters.
+     * @param array<string, mixed> $server    The server variables.
+     * @param bool                 $withToken Whether to inject the valid CSRF
+     *                                        token on POST requests.
+     * @param array<string, mixed> $query     The query parameters.
      *
      * @return Response The HTTP response.
      */
-    public function handleRequest(string $method, string $uri, array $post = [], array $server = []): Response
-    {
-        $request = new Request($method, $uri, [], $post, $server);
+    public function handleRequest(
+        string $method,
+        string $uri,
+        array $post = [],
+        array $server = [],
+        bool $withToken = true,
+        array $query = [],
+    ): Response {
+        if ($withToken && strtoupper($method) === 'POST' && !array_key_exists('_token', $post)) {
+            $post['_token'] = $this->csrfToken();
+        }
+
+        $request = new Request($method, $uri, $query, $post, $server);
 
         $this->container->set(Request::class, $request);
 
         return $this->kernel->handle($request);
+    }
+
+    /**
+     * Return the current test CSRF token.
+     */
+    public function csrfToken(): string
+    {
+        return $this->csrfTokens->token();
     }
 
     /**

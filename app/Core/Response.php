@@ -67,6 +67,32 @@ final class Response
     }
 
     /**
+     * Build an HTML response that must not be cached.
+     *
+     * HTML pages carry a per-session CSRF token, so shared caches must not
+     * store or reuse them. Vary: Cookie keeps cache keys session-aware.
+     *
+     * @param array<string, string> $headers Additional or overridden headers.
+     */
+    public static function html(string $content, int $status = 200, array $headers = []): self
+    {
+        foreach (array_keys($headers) as $name) {
+            if (strcasecmp($name, 'Cache-Control') === 0 || strcasecmp($name, 'Vary') === 0) {
+                unset($headers[$name]);
+            }
+        }
+
+        return new self(
+            $content,
+            $status,
+            $headers + [
+                'Cache-Control' => 'no-store',
+                'Vary' => 'Cookie',
+            ],
+        );
+    }
+
+    /**
      * @param array<mixed>|object $data
      */
     public static function json(array|object $data, int $status = 200): self

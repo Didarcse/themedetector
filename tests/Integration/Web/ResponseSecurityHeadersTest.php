@@ -17,8 +17,11 @@ use App\Controllers\AboutController;
 use App\Controllers\HomeController;
 use App\Controllers\LoadingController;
 use App\Controllers\SeoController;
+use App\Security\CsrfGuard;
+use App\Security\CsrfTokenManager;
 use PHPUnit\Framework\Attributes\BackupGlobals;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\CsrfTestSupport;
 
 /**
  * Verifies the security response headers on the public web routes.
@@ -217,14 +220,20 @@ final class ResponseSecurityHeadersTest extends TestCase
         array $server = [],
         array $trustedProxies = [],
     ): Request {
+        $container = $GLOBALS['app'] ?? null;
+        $post = [];
+
+        if ($container instanceof Container && strtoupper($method) === 'POST') {
+            $post['_token'] = $container->get(CsrfTokenManager::class)->token();
+        }
+
         $request = new Request(
             method: $method,
             uri: $uri,
+            post: $post,
             server: $server,
             trustedProxies: $trustedProxies,
         );
-
-        $container = $GLOBALS['app'] ?? null;
 
         if ($container instanceof Container) {
             $container->set(Request::class, $request);
@@ -237,6 +246,7 @@ final class ResponseSecurityHeadersTest extends TestCase
     {
         $application = new Application();
         $container = $application->container();
+        CsrfTestSupport::register($container);
 
         $container->set(
             View::class,
@@ -255,7 +265,9 @@ final class ResponseSecurityHeadersTest extends TestCase
 
         $container->set(
             LoadingController::class,
-            static fn (): LoadingController => new LoadingController(),
+            static fn (Container $container): LoadingController => new LoadingController(
+                $container->get(CsrfGuard::class),
+            ),
         );
 
         $container->set(
