@@ -105,6 +105,7 @@ responses — carries the following baseline headers:
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `X-Frame-Options: DENY`
 - `Content-Security-Policy` (see below)
+- `X-Request-ID` (server-generated request correlation identifier)
 
 ### Content-Security-Policy
 
@@ -164,6 +165,48 @@ Deployment requirements behind a TLS-terminating reverse proxy:
 
 Never expose HSTS on plain HTTP: browsers would reject future HTTP requests to
 the host, and the header would be ignored over an insecure connection anyway.
+
+## Security Logging
+
+Security-relevant events are written as JSON Lines to
+`storage/logs/app.jsonl`. The logger is fail-open: a logging failure never
+changes an HTTP response or exposes an error to the client.
+
+- Every request receives a server-generated 32-character request identifier.
+  The same value is returned in the `X-Request-ID` response header and written
+  as `request_id` in every event. Client-provided request IDs are ignored.
+- Supported events are `security.csrf.rejected`, `security.session.failed`,
+  `api.auth.rejected`, `api.request.rejected`, `api.rate_limit.denied`,
+  `api.workload.rejected`, `web.rate_limit.denied`, `http.ssrf.blocked`,
+  `http.request.failed`, `detection.engine.degraded`, `http.not_found`, and
+  `app.exception`.
+- Event context is allowlisted and redacted before writing. Unknown keys are
+  dropped, and caller-supplied derived fields cannot override generated target
+  metadata. Raw target URLs are never logged; only `target_host` and a SHA-256
+  `target_hash` derived from the scheme, host, and port are recorded. Paths,
+  query strings, fragments, and credentials are excluded so guessable path
+  identifiers are not exposed.
+- Free-form fields are constrained: reasons, engines, tiers, and API validation
+  error codes must match approved values; request paths must match known
+  application routes; unknown methods and media types are reduced to `OTHER`
+  and `other`; content-type parameters are stripped; exception classes are
+  validated and exception files are reduced to a basename.
+- Authorization headers, cookies, CSRF tokens, API keys, session identifiers,
+  passwords, request/response bodies, full headers, and query strings are never
+  logged. Exception messages and stack traces are never logged; only the
+  exception class, basename, and line are recorded.
+- The request context is attached at the start of `Kernel::handle()` and
+  cleared in a `finally` block, so a long-running process cannot attach a stale
+  request ID or request metadata to a later event.
+- Client IP addresses are omitted from logs unless `LOG_HASH_KEY` is configured.
+  With a key, the address is represented by an HMAC-SHA256 identifier. Keep the
+  key secret; changing it makes previously logged identifiers non-comparable.
+- `LOG_ENABLED`, `LOG_LEVEL`, and `LOG_HASH_KEY` control logging behavior.
+  `LOG_RETENTION_DAYS` is a documentation target only: the application does not
+  rotate or delete log files. Use an external cleanup mechanism and keep the
+  value aligned with that mechanism.
+- Log files are created with restrictive permissions (`0600`, directory
+  `0700`) and appended under an exclusive lock.
 
 ## Security Best Practices for Contributors
 

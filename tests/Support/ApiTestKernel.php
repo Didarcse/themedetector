@@ -25,6 +25,8 @@ use App\Controllers\DetectionController;
 use App\Controllers\HomeController;
 use App\Controllers\LoadingController;
 use App\Controllers\SeoController;
+use App\Logging\ContextRedactor;
+use App\Logging\SecurityEventLogger;
 use App\Modules\Detection\Core\DetectionPipeline;
 use App\Modules\Detection\DetectionContextFactory;
 use App\Modules\Detection\DetectionEngine;
@@ -117,6 +119,7 @@ HTML;
     public readonly Container $container;
     public readonly ApiFakeHttpClient $client;
     public readonly CsrfTokenManager $csrfTokens;
+    public readonly InMemoryLogger $logger;
 
     private readonly string $storageDir;
 
@@ -129,12 +132,14 @@ HTML;
         string $storageDir,
         ApiFakeHttpClient $client,
         CsrfTokenManager $csrfTokens,
+        InMemoryLogger $logger,
     ) {
         $this->kernel = $kernel;
         $this->container = $container;
         $this->storageDir = $storageDir;
         $this->client = $client;
         $this->csrfTokens = $csrfTokens;
+        $this->logger = $logger;
     }
 
     /**
@@ -180,7 +185,11 @@ HTML;
     ): self {
         $application = new Application();
         $container = $application->container();
-        $csrfTokens = CsrfTestSupport::register($container);
+        $memoryLogger = new InMemoryLogger();
+        $eventLogger = new SecurityEventLogger($memoryLogger, new ContextRedactor());
+        $container->set(InMemoryLogger::class, $memoryLogger);
+        $container->set(SecurityEventLogger::class, $eventLogger);
+        $csrfTokens = CsrfTestSupport::register($container, $eventLogger);
 
         $fake = $client instanceof ApiFakeHttpClient
             ? $client
@@ -277,6 +286,7 @@ HTML;
                 $container->get(ThemeExtractor::class),
                 $container->get(PluginDetectionManager::class),
                 $container->get(TechnologyDetector::class),
+                $container->get(SecurityEventLogger::class),
             ),
         );
 
@@ -318,6 +328,7 @@ HTML;
                 $container->get(DetectionService::class),
                 $webRateLimiter,
                 $container->get(CsrfGuard::class),
+                $container->get(SecurityEventLogger::class),
             ),
         );
 
@@ -390,6 +401,7 @@ HTML;
                 $anonymousLimiter,
                 $keyedLimiter,
                 $container->get(WorkloadGuard::class),
+                $container->get(SecurityEventLogger::class),
             ),
         );
 
@@ -401,6 +413,7 @@ HTML;
             router: $router,
             dispatcher: $dispatcher,
             exceptionHandler: $exceptionHandler,
+            eventLogger: $container->get(SecurityEventLogger::class),
         );
 
         require dirname(__DIR__, 2) . '/routes/web.php';
@@ -408,7 +421,14 @@ HTML;
 
         $GLOBALS['app'] = $container;
 
-        return new self($kernel, $container, $storageDir, $fake, $csrfTokens);
+        return new self(
+            $kernel,
+            $container,
+            $storageDir,
+            $fake,
+            $csrfTokens,
+            $memoryLogger,
+        );
     }
 
     /**

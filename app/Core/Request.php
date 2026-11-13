@@ -23,6 +23,7 @@ final class Request
 
     private readonly string $method;
     private readonly string $uri;
+    private readonly string $requestId;
     /** @var array<string, mixed> */
     private readonly array $query;
     /** @var array<string, mixed> */
@@ -57,6 +58,7 @@ final class Request
     ) {
         $this->method = strtoupper($method);
         $this->uri = '/' . ltrim(trim($uri), '/');
+        $this->requestId = bin2hex(random_bytes(16));
         $this->query = $query;
         $this->post = $post;
         $this->server = $server;
@@ -75,6 +77,19 @@ final class Request
     public function uri(): string
     {
         return $this->uri;
+    }
+
+    /**
+     * Return the server-generated correlation identifier for this request.
+     *
+     * The value is always generated locally and never derived from client
+     * headers, preventing callers from choosing or spoofing log identifiers.
+     *
+     * @return string A 32-character lowercase hexadecimal identifier.
+     */
+    public function requestId(): string
+    {
+        return $this->requestId;
     }
 
     /** @return array<string, mixed> */

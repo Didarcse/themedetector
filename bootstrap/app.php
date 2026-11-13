@@ -23,6 +23,11 @@ use App\Controllers\DetectionController;
 use App\Controllers\HomeController;
 use App\Controllers\LoadingController;
 use App\Controllers\SeoController;
+use App\Logging\ContextRedactor;
+use App\Logging\FileLogger;
+use App\Logging\LogLevel;
+use App\Logging\NullLogger;
+use App\Logging\SecurityEventLogger;
 use Dotenv\Dotenv;
 use App\Modules\Detection\Core\DetectionPipeline;
 use App\Modules\Detection\DetectionContextFactory;
@@ -70,6 +75,42 @@ $application = new Application();
 $container = $application->container();
 
 /*
+ * Structured security logging. Disabled logging swaps in a no-op logger so
+ * the rest of the event pipeline stays unchanged. An invalid LOG_LEVEL falls
+ * back to warning rather than preventing the application from booting.
+ */
+$container->set(
+    SecurityEventLogger::class,
+    static function (): SecurityEventLogger {
+        $enabled = filter_var(
+            Environment::get('LOG_ENABLED') ?? 'true',
+            FILTER_VALIDATE_BOOLEAN,
+            FILTER_NULL_ON_FAILURE,
+        ) ?? true;
+        $levelName = Environment::get('LOG_LEVEL') ?? 'warning';
+
+        try {
+            $level = LogLevel::fromName($levelName);
+        } catch (InvalidArgumentException) {
+            $level = LogLevel::WARNING;
+        }
+
+        $logger = $enabled
+            ? new FileLogger(
+                dirname(__DIR__) . '/storage/logs/app.jsonl',
+                $level,
+                true,
+            )
+            : new NullLogger();
+
+        return new SecurityEventLogger(
+            $logger,
+            new ContextRedactor(Environment::get('LOG_HASH_KEY')),
+        );
+    },
+);
+
+/*
  * Populated service registries are registered before boot so that the
  * idempotent service providers never overwrite them with empty registries.
  */
@@ -90,19 +131,21 @@ $maxHeaderBytes = (static function (): int {
 })();
 $container->set(
     HttpClientInterface::class,
-    static fn (): HttpClientInterface => new CurlHttpClient(
+    static fn (Container $container): HttpClientInterface => new CurlHttpClient(
         new NativeCurlAdapter(
             maxResponseBytes: $maxResponseBytes,
             maxHeaderBytes: $maxHeaderBytes,
         ),
+        eventLogger: $container->get(SecurityEventLogger::class),
     ),
 );
 
 $container->set(
     HttpClient::class,
-    static fn (): HttpClient => new HttpClient(
+    static fn (Container $container): HttpClient => new HttpClient(
         maxResponseBytes: $maxResponseBytes,
         maxHeaderBytes: $maxHeaderBytes,
+        eventLogger: $container->get(SecurityEventLogger::class),
     ),
 );
 
@@ -192,6 +235,7 @@ $container->set(
         $container->get(ThemeExtractor::class),
         $container->get(PluginDetectionManager::class),
         $container->get(TechnologyDetector::class),
+        $container->get(SecurityEventLogger::class),
     ),
 );
 
@@ -230,6 +274,7 @@ $container->set(
             new NativeSessionDriver(),
             $storageDir . '/sessions',
             $request instanceof Request && $request->isSecure(),
+            $container->get(SecurityEventLogger::class),
         );
     },
 );
@@ -245,6 +290,7 @@ $container->set(
     CsrfGuard::class,
     static fn (Container $container): CsrfGuard => new CsrfGuard(
         $container->get(CsrfTokenManager::class),
+        $container->get(SecurityEventLogger::class),
     ),
 );
 
@@ -271,6 +317,7 @@ $container->set(
         $container->get(DetectionService::class),
         $container->get('web.rate_limiter'),
         $container->get(CsrfGuard::class),
+        $container->get(SecurityEventLogger::class),
     ),
 );
 
@@ -354,6 +401,7 @@ $container->set(
         $container->get('api.rate_limiter.anonymous'),
         $container->get('api.rate_limiter.keyed'),
         $container->get(WorkloadGuard::class),
+        $container->get(SecurityEventLogger::class),
     ),
 );
 
@@ -365,6 +413,7 @@ $kernel = new Kernel(
     router: $router,
     dispatcher: $dispatcher,
     exceptionHandler: $exceptionHandler,
+    eventLogger: $container->get(SecurityEventLogger::class),
 );
 
 require dirname(__DIR__) . '/routes/web.php';

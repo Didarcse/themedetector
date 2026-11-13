@@ -14,6 +14,7 @@ use App\Api\RateLimiter;
 use App\Api\WorkloadGuard;
 use App\Core\Request;
 use App\Core\Response;
+use App\Logging\SecurityEventLogger;
 use App\Services\WebsiteReportAnalyzer;
 
 /**
@@ -59,6 +60,8 @@ final class ApiV1DetectionController
      *                                                          limiter.
      * @param WorkloadGuard                 $guard             The concurrency
      *                                                          guard.
+     * @param SecurityEventLogger|null      $eventLogger       The security
+     *                                                          event logger.
      */
     public function __construct(
         private ApiKeyStore $apiKeys,
@@ -69,6 +72,7 @@ final class ApiV1DetectionController
         private RateLimiter $anonymousLimiter,
         private RateLimiter $keyedLimiter,
         private WorkloadGuard $guard,
+        private ?SecurityEventLogger $eventLogger = null,
     ) {
     }
 
@@ -76,9 +80,13 @@ final class ApiV1DetectionController
     {
         $request = app()->get(Request::class);
 
-        $requestId = bin2hex(random_bytes(16));
+        $requestId = $request->requestId();
 
         if (!$this->hasJsonContentType($request)) {
+            $this->eventLogger?->apiRequestRejected(415, 'unsupported_media_type', [
+                'content_type' => $this->serverString($request, 'HTTP_CONTENT_TYPE'),
+            ]);
+
             return $this->json(
                 $this->presenter->error(
                     'unsupported_media_type',
@@ -90,6 +98,10 @@ final class ApiV1DetectionController
         }
 
         if ($request->bodyExceedsLimit()) {
+            $this->eventLogger?->apiRequestRejected(413, 'payload_too_large', [
+                'max_bytes' => $request->maxBodyBytes(),
+            ]);
+
             return $this->json(
                 $this->presenter->error(
                     'payload_too_large',
@@ -103,6 +115,8 @@ final class ApiV1DetectionController
         $payload = json_decode($request->body(), true);
 
         if ($payload === null && trim($request->body()) !== 'null') {
+            $this->eventLogger?->apiRequestRejected(400, 'invalid_json');
+
             return $this->json(
                 $this->presenter->error(
                     'invalid_json',
@@ -122,6 +136,13 @@ final class ApiV1DetectionController
         $validation = $this->validator->validate($payload);
 
         if (!$validation->valid()) {
+            $this->eventLogger?->apiRequestRejected(422, 'invalid_url', [
+                'error_codes' => array_map(
+                    static fn (array $error): string => $error['code'],
+                    $validation->errors(),
+                ),
+            ]);
+
             return $this->json($this->presenter->errors($validation->errors(), $requestId), 422);
         }
 
@@ -130,6 +151,13 @@ final class ApiV1DetectionController
         $rate = $limiter->consume($authentication->identifier());
 
         if (!$rate->allowed()) {
+            $this->eventLogger?->apiRateLimitDenied(
+                $authentication->tier(),
+                $rate->limit(),
+                $rate->remaining(),
+                $rate->retryAfterSeconds(),
+            );
+
             return $this->json(
                 $this->presenter->error(
                     'rate_limited',
@@ -142,6 +170,8 @@ final class ApiV1DetectionController
         }
 
         if (!$this->guard->acquire()) {
+            $this->eventLogger?->apiWorkloadRejected($this->guard->maxConcurrent());
+
             return $this->json(
                 $this->presenter->error(
                     'rate_limited',
@@ -193,6 +223,8 @@ final class ApiV1DetectionController
 
         if ($authorization === '') {
             if ($this->apiKeys->hasKeys()) {
+                $this->eventLogger?->apiAuthRejected('missing_api_key', false);
+
                 return $this->json(
                     $this->presenter->error(
                         'unauthorized',
@@ -207,6 +239,8 @@ final class ApiV1DetectionController
         }
 
         if (preg_match('#^Bearer\s+(\S+)$#i', $authorization, $matches) !== 1) {
+            $this->eventLogger?->apiAuthRejected('invalid_authorization_scheme', true);
+
             return $this->json(
                 $this->presenter->error(
                     'unauthorized',
@@ -220,6 +254,8 @@ final class ApiV1DetectionController
         $key = $matches[1];
 
         if (!$this->apiKeys->validate($key)) {
+            $this->eventLogger?->apiAuthRejected('invalid_api_key', true);
+
             return $this->json(
                 $this->presenter->error(
                     'unauthorized',

@@ -11,6 +11,7 @@ use App\Core\Response;
 use App\Domain\DetectionReport\DetectionError;
 use App\Domain\DetectionReport\DetectionReport;
 use App\Domain\DetectionReport\WebsiteInformation;
+use App\Logging\SecurityEventLogger;
 use App\Security\CsrfGuard;
 use App\Services\DetectionService;
 use App\ViewModels\DetectionReportViewModel;
@@ -57,6 +58,7 @@ final class DetectionController
         private readonly DetectionService $service,
         private readonly RateLimiter $webRateLimiter,
         private readonly CsrfGuard $csrf,
+        private readonly ?SecurityEventLogger $eventLogger = null,
     ) {
     }
 
@@ -75,6 +77,11 @@ final class DetectionController
         $rate = $this->webRateLimiter->consume($this->clientIp($request));
 
         if (!$rate->allowed()) {
+            $this->eventLogger?->webRateLimitDenied(
+                $rate->limit(),
+                $rate->retryAfterSeconds(),
+            );
+
             return $this->rateLimitResponse($url, $rate);
         }
 

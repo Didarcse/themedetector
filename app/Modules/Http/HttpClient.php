@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Http;
 
+use App\Logging\SecurityEventLogger;
+use App\Modules\Http\Exceptions\SsrfBlockedException;
 use CurlHandle;
 
 /**
@@ -33,11 +35,13 @@ class HttpClient
      *                              bytes. Header regions larger than this
      *                              are failed closed and reported as a
      *                              transport failure.
+     * @param SecurityEventLogger|null $eventLogger The security event logger.
      */
     public function __construct(
         ?UrlHostPolicy $urlPolicy = null,
         private int $maxResponseBytes = BoundedBodyCollector::DEFAULT_MAX_BYTES,
         private int $maxHeaderBytes = BoundedHeaderCollector::DEFAULT_MAX_BYTES,
+        private ?SecurityEventLogger $eventLogger = null,
     ) {
         $this->urlPolicy = $urlPolicy;
     }
@@ -73,7 +77,9 @@ class HttpClient
         }
 
         if (!$this->policy()->isAllowed($url)) {
-            throw new HttpException('Invalid URL.');
+            $this->eventLogger?->ssrfBlocked($url);
+
+            throw new SsrfBlockedException('Invalid URL.');
         }
 
         return $url;

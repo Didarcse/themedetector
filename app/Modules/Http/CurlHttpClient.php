@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Http;
 
+use App\Logging\SecurityEventLogger;
 use App\Modules\Http\Curl\CurlAdapterInterface;
 use App\Modules\Http\Curl\CurlResponse;
 use App\Modules\Http\Exceptions\HttpClientException;
+use App\Modules\Http\Exceptions\SsrfBlockedException;
 
 /**
  * Default HttpClientInterface implementation.
@@ -52,15 +54,17 @@ final readonly class CurlHttpClient implements HttpClientInterface
      *                                        a redirect chain.
      * @param string               $userAgent The user agent to send with
      *                                        the request.
-     * @param UrlHostPolicy        $urlPolicy The SSRF destination policy
-     *                                        applied to the initial URL and
-     *                                        to every redirect target.
+     * @param UrlHostPolicy        $urlPolicy   The SSRF destination policy
+     *                                          applied to the initial URL and
+     *                                          to every redirect target.
+     * @param SecurityEventLogger|null $eventLogger The security event logger.
      */
     public function __construct(
         private CurlAdapterInterface $adapter,
         private int $timeout = 15,
         private string $userAgent = 'ThemeDetectorTool/2.0',
         private UrlHostPolicy $urlPolicy = new UrlHostPolicy(),
+        private ?SecurityEventLogger $eventLogger = null,
     ) {
     }
 
@@ -132,7 +136,9 @@ final readonly class CurlHttpClient implements HttpClientInterface
         }
 
         if (!$this->urlPolicy->isAllowed($url)) {
-            throw new HttpClientException('Invalid URL.');
+            $this->eventLogger?->ssrfBlocked($url);
+
+            throw new SsrfBlockedException('Invalid URL.');
         }
     }
 

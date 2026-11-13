@@ -77,6 +77,16 @@ final class WorkloadGuard
     }
 
     /**
+     * Return the configured concurrency cap.
+     *
+     * @return int The maximum concurrent detections, 0 when disabled.
+     */
+    public function maxConcurrent(): int
+    {
+        return $this->maxConcurrent;
+    }
+
+    /**
      * Try to acquire a detection slot.
      *
      * When the concurrency cap is reached, false is returned and the

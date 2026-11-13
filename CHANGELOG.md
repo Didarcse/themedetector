@@ -20,10 +20,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Start action carrying the token. The JSON API remains CSRF-exempt.
 - HTML responses that carry a token are sent with `Cache-Control: no-store` and
   `Vary: Cookie`.
+- Added structured security logging as JSON Lines in
+  `storage/logs/app.jsonl`, with server-generated request correlation exposed
+  through the `X-Request-ID` response header.
+- Added allowlist-based context redaction: no raw target URLs, authorization
+  headers, cookies, CSRF tokens, API keys, session identifiers, request or
+  response bodies, exception messages, or stack traces are logged. Target URLs
+  are reduced to a host and SHA-256 hash; client IPs are omitted unless an
+  optional HMAC key is configured.
+- Added `LOG_ENABLED`, `LOG_LEVEL`, `LOG_RETENTION_DAYS`, and `LOG_HASH_KEY`
+  configuration. Logging is fail-open and never changes HTTP behavior.
+- Hardened security log context: generated target metadata cannot be overridden
+  by caller context, target hashes cover only scheme/host/port, exception files
+  are reduced to basenames, free-form fields are allowlisted or normalized, and
+  request context is cleared after every response.
 
 ### Quality Gates
 
-- PHPUnit 11: 1533 tests, 3961 assertions passing.
+- PHPUnit 11: 1373 tests, 3022 assertions passing.
 - PHPStan Level MAX: 0 errors.
 - PHP_CodeSniffer PSR-12: 0 errors (pre-existing line-length warnings remain in
   unrelated benchmark/fixture files).

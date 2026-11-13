@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Security;
 
+use App\Logging\SecurityEventLogger;
 use RuntimeException;
 
 /**
@@ -23,6 +24,7 @@ final class SessionManager
         private readonly SessionDriverInterface $driver,
         private readonly string $savePath,
         private readonly bool $secure,
+        private readonly ?SecurityEventLogger $eventLogger = null,
     ) {
     }
 
@@ -56,7 +58,10 @@ final class SessionManager
         }
 
         if ($this->driver->headersSent()) {
-            throw new RuntimeException('Cannot start the session after output has been sent.');
+            $this->fail(
+                'headers_already_sent',
+                'Cannot start the session after output has been sent.',
+            );
         }
 
         $this->ensureStorageDirectory();
@@ -64,11 +69,14 @@ final class SessionManager
         $isNewSession = !$this->driver->hasSessionCookie(self::COOKIE_NAME);
 
         if (!$this->driver->start(self::options($this->secure), self::COOKIE_NAME, $this->savePath)) {
-            throw new RuntimeException('Unable to start the session.');
+            $this->fail('session_start_failed', 'Unable to start the session.');
         }
 
         if ($isNewSession && !$this->driver->regenerateId(true)) {
-            throw new RuntimeException('Unable to establish a fresh session identifier.');
+            $this->fail(
+                'session_regenerate_failed',
+                'Unable to establish a fresh session identifier.',
+            );
         }
     }
 
@@ -98,7 +106,7 @@ final class SessionManager
         }
 
         if (!$this->driver->close()) {
-            throw new RuntimeException('Unable to persist the session.');
+            $this->fail('session_persist_failed', 'Unable to persist the session.');
         }
     }
 
@@ -106,14 +114,30 @@ final class SessionManager
     {
         if (is_dir($this->savePath)) {
             if (!is_writable($this->savePath)) {
-                throw new RuntimeException('The session storage directory is not writable.');
+                $this->fail(
+                    'storage_not_writable',
+                    'The session storage directory is not writable.',
+                );
             }
 
             return;
         }
 
         if (!@mkdir($this->savePath, 0700, true) && !is_dir($this->savePath)) {
-            throw new RuntimeException('Unable to create the session storage directory.');
+            $this->fail(
+                'storage_create_failed',
+                'Unable to create the session storage directory.',
+            );
         }
+    }
+
+    /**
+     * Log the session failure reason, then throw the existing public error.
+     */
+    private function fail(string $reason, string $message): never
+    {
+        $this->eventLogger?->sessionFailed($reason);
+
+        throw new RuntimeException($message);
     }
 }

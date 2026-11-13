@@ -6,6 +6,7 @@ namespace App\Modules\Http\Providers;
 
 use App\Core\Container;
 use App\Core\Contracts\ServiceProviderInterface;
+use App\Logging\SecurityEventLogger;
 use App\Modules\Http\BoundedBodyCollector;
 use App\Modules\Http\BoundedHeaderCollector;
 use App\Modules\Http\Curl\NativeCurlAdapter;
@@ -58,12 +59,19 @@ final class HttpServiceProvider implements ServiceProviderInterface
 
         $container->set(
             HttpClientInterface::class,
-            fn (Container $container): HttpClientInterface => new CurlHttpClient(
-                new NativeCurlAdapter(
-                    maxResponseBytes: self::maxResponseBytes(),
-                    maxHeaderBytes: self::maxHeaderBytes(),
-                ),
-            ),
+            static function (Container $container): HttpClientInterface {
+                $eventLogger = $container->has(SecurityEventLogger::class)
+                    ? $container->get(SecurityEventLogger::class)
+                    : null;
+
+                return new CurlHttpClient(
+                    new NativeCurlAdapter(
+                        maxResponseBytes: self::maxResponseBytes(),
+                        maxHeaderBytes: self::maxHeaderBytes(),
+                    ),
+                    eventLogger: $eventLogger,
+                );
+            },
         );
     }
 

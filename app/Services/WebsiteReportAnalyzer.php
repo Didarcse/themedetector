@@ -12,6 +12,8 @@ use App\Domain\DetectionReport\WebsiteInformation;
 use App\Modules\Detection\Core\DetectionPipeline;
 use App\Modules\Detection\DetectionContext;
 use App\Modules\Detection\DetectionContextFactory;
+use App\Logging\SecurityEventLogger;
+use App\Modules\Http\Exceptions\SsrfBlockedException;
 use App\Modules\Http\HttpClientInterface;
 use App\Modules\Http\HttpException;
 use App\Modules\PluginDetection\PluginDetectionManager;
@@ -79,6 +81,8 @@ final readonly class WebsiteReportAnalyzer
      * @param TechnologyDetector      $technologyDetector The Technology
      *                                                   Detection Engine
      *                                                   facade.
+     * @param SecurityEventLogger|null $eventLogger       The security event
+     *                                                   logger.
      */
     public function __construct(
         private HttpClientInterface $httpClient,
@@ -87,6 +91,7 @@ final readonly class WebsiteReportAnalyzer
         private ThemeExtractor $themeExtractor,
         private PluginDetectionManager $pluginManager,
         private TechnologyDetector $technologyDetector,
+        private ?SecurityEventLogger $eventLogger = null,
     ) {
     }
 
@@ -140,7 +145,15 @@ final readonly class WebsiteReportAnalyzer
                 summary: DetectionSummary::from($detection, $theme, $plugin),
                 detectionTime: microtime(true) - $startedAt,
             );
+        } catch (SsrfBlockedException) {
+            return $this->errorReport(
+                url: $url,
+                code: 'transport_failure',
+                message: 'The website could not be reached. Please check the URL and try again.',
+            );
         } catch (HttpException) {
+            $this->eventLogger?->httpRequestFailed($url, 'transport_failure');
+
             return $this->errorReport(
                 url: $url,
                 code: 'transport_failure',
@@ -168,6 +181,8 @@ final readonly class WebsiteReportAnalyzer
         try {
             $results = $this->technologyDetector->detect($context);
         } catch (RuntimeException) {
+            $this->eventLogger?->detectionEngineDegraded('technology');
+
             return [];
         }
 

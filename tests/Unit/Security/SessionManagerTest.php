@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Security;
 
+use App\Logging\ContextRedactor;
+use App\Logging\LogLevel;
+use App\Logging\SecurityEventLogger;
 use App\Security\SessionManager;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Tests\Support\FakeSessionDriver;
+use Tests\Support\InMemoryLogger;
 
 /**
  * Unit tests for session configuration, fixation protection, and failures.
@@ -97,6 +101,36 @@ final class SessionManagerTest extends TestCase
         $this->expectExceptionMessage('Unable to start the session.');
 
         $manager->start();
+    }
+
+    public function test_startup_failure_is_logged_without_sensitive_context(): void
+    {
+        $driver = new FakeSessionDriver();
+        $driver->startResult = false;
+        $memory = new InMemoryLogger();
+        $manager = new SessionManager(
+            $driver,
+            $this->temporaryPath(),
+            false,
+            new SecurityEventLogger($memory, new ContextRedactor()),
+        );
+
+        try {
+            $manager->start();
+            self::fail('Expected session startup to fail.');
+        } catch (RuntimeException $exception) {
+            self::assertSame('Unable to start the session.', $exception->getMessage());
+        }
+
+        $records = $memory->recordsFor(SecurityEventLogger::SESSION_FAILED);
+
+        self::assertCount(1, $records);
+        self::assertSame(LogLevel::ERROR, $records[0]['level']);
+        self::assertSame('session_start_failed', $records[0]['context']['reason']);
+        self::assertStringNotContainsString(
+            'Unable to start the session.',
+            json_encode($records, JSON_THROW_ON_ERROR),
+        );
     }
 
     public function test_identifier_regeneration_failure_fails_closed(): void

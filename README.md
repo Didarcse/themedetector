@@ -49,7 +49,10 @@ stages.
   synchronizer tokens protect `POST /loading` and `POST /detect`; the JSON API
   remains keyed and CSRF-exempt.
 - **Quality gates** — PHP 8.2, `declare(strict_types=1)`, PSR-12, PHPStan Level MAX,
-  PHPUnit 11 (1533 tests, 3961 assertions).
+  PHPUnit 11 (1373 tests, 3022 assertions).
+- **Structured security logging** — JSON Lines events in
+  `storage/logs/app.jsonl`, correlated by a server-generated `X-Request-ID`,
+  with allowlist-based redaction and no raw URLs, keys, cookies, or bodies.
 
 ## Theme Extraction Support
 
@@ -133,7 +136,7 @@ themedetector/
 ├── storage/
 │   ├── api/                    # Public API runtime state (rate limits, workload)
 │   ├── cache/                  # Detection response cache
-│   ├── logs/                   # Application logs
+│   ├── logs/                   # Structured security logs (app.jsonl)
 │   ├── phpstan/                # PHPStan cache
 │   └── sessions/               # PHP session files (CSRF tokens; never web-accessible)
 ├── tests/
@@ -209,6 +212,38 @@ config, tests, storage) must not be web-accessible.
   instance, otherwise CSRF tokens issued by one instance will fail on another.
 - **Requirements** — PHP 8.2+, `ext-curl`, `ext-json`, `ext-dom`, `ext-filter`, and Composer 2.x.
 
+## Security Logging
+
+Security-relevant events are written as one JSON object per line to
+`storage/logs/app.jsonl`. Every response also carries a server-generated
+`X-Request-ID` header; the same value appears as `request_id` on each event, so
+a response can be correlated with its logs without trusting client-supplied
+identifiers.
+
+Configuration is optional:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `LOG_ENABLED` | `true` | Set to `false` to disable structured logging. |
+| `LOG_LEVEL` | `warning` | Minimum severity: `debug`, `info`, `notice`, `warning`, `error`, `critical`. |
+| `LOG_RETENTION_DAYS` | `30` | Documentation target for external log cleanup. |
+| `LOG_HASH_KEY` | empty | Optional HMAC-SHA256 key for client-IP identifiers. |
+
+Logging is fail-open: a write failure never changes an HTTP response. Context is
+allowlisted and redacted before writing. Raw target URLs are reduced to
+`target_host` plus a SHA-256 `target_hash` of the scheme, host, and port only;
+paths, query strings, fragments, and credentials are excluded so guessable path
+identifiers are not exposed. Client IPs are omitted unless `LOG_HASH_KEY` is
+set, exception files are reduced to a basename, and authorization headers,
+cookies, CSRF tokens, API keys, session identifiers, request/response bodies,
+and exception messages are never logged. Free-form fields such as reasons,
+engines, tiers, methods, media types, and request paths are constrained to
+approved values or normalized to safe placeholders.
+
+The application does not rotate or delete log files. Schedule external cleanup
+(for example `logrotate` or a platform retention policy) and keep
+`LOG_RETENTION_DAYS` aligned with that schedule.
+
 ## Known Limitations
 
 - **Blocked or protected websites.** Sites behind a WAF, geo/bot protection, or
@@ -238,7 +273,7 @@ vendor/bin/phpunit --testsuite tests
 
 `phpunit.xml` is strict: the suite fails on warnings, notices, deprecations, risky
 tests, unexpected global state, and unexpected output. Current status:
-**OK (1533 tests, 3961 assertions)**. Benchmark classes live in `tests/Benchmark/`
+**OK (1373 tests, 3022 assertions)**. Benchmark classes live in `tests/Benchmark/`
 and are deliberately **not** part of the PHPUnit suites — run them manually with
 `php tests/Benchmark/<file>.php`.
 

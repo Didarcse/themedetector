@@ -19,6 +19,7 @@ Thumbs.db
 
 # Logs
 /storage/logs/*.log
+/storage/logs/*.jsonl
 
 # Cache
 /storage/cache/*
